@@ -43,6 +43,7 @@ _LOGGER = logging.getLogger(__name__)
 _VOICE_REQUEST_HEADERS = {
     "x-openclaw-source": "voice",
     "x-ha-voice": "true",
+    "x-openclaw-message-channel": "voice",
 }
 
 
