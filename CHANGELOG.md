@@ -2,6 +2,25 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.62] - 2026-04-04
+
+### Added
+- Added `continue_conversation` heuristics for Assist / Voice PE follow-up dialog so voice satellites can automatically re-listen when the assistant asks a follow-up question. (Merged PR #11)
+- Added `x-openclaw-message-channel: voice` on voice pipeline requests so the OpenClaw runtime can identify Assist sessions as voice instead of generic webchat. (Merged PR #13)
+
+### Fixed
+- Fixed the **Active Model** select entity so the selected model is actually passed to both chat-card and Assist requests.
+- Fixed manifest documentation and issue-tracker links so they point to the integration repository instead of the add-on repository.
+- Fixed chat-card cache-busting/version drift by aligning backend resource registration and the root loader shim with the current integration version.
+- Fixed event entity lifecycle handling by moving event-bus subscriptions into `async_added_to_hass`.
+- Fixed potential cross-agent Assist context bleed by namespacing fallback conversation IDs with the selected agent ID.
+
+### Changed
+- Removed the unsupported `attachments` field from `openclaw.send_message` service schema/docs/translations because it was accepted by the integration but never sent to the gateway.
+- Extracted shared recursive response-text parsing into `helpers.py` to remove duplicated logic.
+- Added a warning when the API client has to create a fallback aiohttp session because the primary Home Assistant-managed session is no longer available.
+- Updated README documentation to reflect current model-selection, event-entity, and service behavior.
+
 ## [0.1.61] - 2026-03-07
 
 ### Added
