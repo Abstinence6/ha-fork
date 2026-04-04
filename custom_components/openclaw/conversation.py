@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
+import re
 from typing import Any
 
 from homeassistant.components import conversation
@@ -201,6 +202,7 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         return conversation.ConversationResult(
             response=intent_response,
             conversation_id=conversation_id,
+            continue_conversation=self._should_continue(full_response),
         )
 
     def _resolve_conversation_id(self, user_input: conversation.ConversationInput) -> str:
@@ -314,6 +316,53 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
                     return extracted
 
         return None
+
+    @staticmethod
+    def _should_continue(response: str) -> bool:
+        """Determine if the conversation should continue after this response.
+
+        Returns True when the assistant's reply ends with a question or
+        an explicit prompt for follow-up, so that Voice PE and other
+        satellites automatically re-listen without requiring a wake word.
+
+        The heuristic checks for:
+        - Trailing question marks (including after closing quotes/parens)
+        - Common conversational follow-up patterns in English and German
+        """
+        if not response:
+            return False
+
+        text = response.strip()
+
+        # Check if the response ends with a question mark
+        # (allow trailing punctuation like quotes, parens, or emoji)
+        if re.search(r"\?\s*[\"'""»)\]]*\s*$", text):
+            return True
+
+        # Common follow-up patterns (EN + DE)
+        lower = text.lower()
+        follow_up_patterns = (
+            "what do you think",
+            "would you like",
+            "do you want",
+            "shall i",
+            "should i",
+            "can i help",
+            "anything else",
+            "let me know",
+            "was meinst du",
+            "möchtest du",
+            "willst du",
+            "soll ich",
+            "kann ich",
+            "noch etwas",
+            "sonst noch",
+        )
+        for pattern in follow_up_patterns:
+            if pattern in lower:
+                return True
+
+        return False
 
     def _error_result(
         self,
