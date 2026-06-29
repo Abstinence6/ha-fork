@@ -2,6 +2,11 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.66] - 2026-06-29
+
+### Fixed
+- Bumped config entry migration again so Home Assistant instances already on integration version 2 still migrate legacy `main` and `ha-smart-home` agent IDs to `smart-home`.
+
 ## [0.1.65] - 2026-06-29
 
 ### Fixed

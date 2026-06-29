@@ -135,7 +135,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     values to `smart-home` so HA Assist and the chat card converge on the same
     routed agent without requiring manual options changes.
     """
-    if entry.version >= 2:
+    if entry.version >= 3:
         return True
 
     new_data = dict(entry.data)
