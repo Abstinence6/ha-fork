@@ -2,6 +2,13 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.69] - 2026-06-29
+
+### Fixed
+- Fixed the `openclaw/get_settings` websocket endpoint after the smart-home routing migration so the Lovelace card can receive normalized `agent_id`, `voice_agent_id`, and session settings again.
+- Treat the bare `openclaw` model as a legacy/base model override and ignore it for routing, allowing the configured `smart-home` agent to drive chat-card and Assist requests.
+- Aligned the backend Lovelace resource cache-bust URL with the current integration version.
+
 ## [0.1.68] - 2026-06-29
 
 ### Fixed

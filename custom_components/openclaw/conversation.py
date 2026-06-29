@@ -77,7 +77,7 @@ def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
 
     return cleaned
 
-_LEGACY_ACTIVE_MODELS = {"main", "ha-smart-home"}
+_LEGACY_ACTIVE_MODELS = {"openclaw", "main", "ha-smart-home"}
 
 
 def _normalize_active_model(value: Any) -> str | None:
