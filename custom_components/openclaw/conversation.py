@@ -23,10 +23,14 @@ from .const import (
     ATTR_MODEL,
     ATTR_SESSION_ID,
     ATTR_TIMESTAMP,
+    CONF_ASSIST_SESSION_ID,
     CONF_AGENT_ID,
     CONF_CONTEXT_MAX_CHARS,
     CONF_CONTEXT_STRATEGY,
     CONF_INCLUDE_EXPOSED_CONTEXT,
+    CONF_VOICE_AGENT_ID,
+    DEFAULT_ASSIST_SESSION_ID,
+    DEFAULT_AGENT_ID,
     DEFAULT_CONTEXT_MAX_CHARS,
     DEFAULT_CONTEXT_STRATEGY,
     DEFAULT_INCLUDE_EXPOSED_CONTEXT,
@@ -58,34 +62,6 @@ _VOICE_REQUEST_HEADERS = {
     "x-ha-voice": "true",
     "x-openclaw-message-channel": "voice",
 }
-
-_LEGACY_AGENT_IDS = {"main"}
-
-
-def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
-    """Return a usable agent id, dropping legacy defaults."""
-    if not isinstance(value, str):
-        return fallback
-
-    cleaned = value.strip()
-    if not cleaned or cleaned in _LEGACY_AGENT_IDS:
-        return fallback
-
-    return cleaned
-
-_LEGACY_ACTIVE_MODELS = {"openclaw", "main"}
-
-
-def _normalize_active_model(value: Any) -> str | None:
-    """Return an explicit model override, ignoring legacy routing defaults."""
-    if not isinstance(value, str):
-        return None
-
-    cleaned = value.strip()
-    if not cleaned or cleaned in _LEGACY_ACTIVE_MODELS:
-        return None
-
-    return cleaned
 
 
 async def async_setup_entry(
@@ -159,15 +135,18 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         message = user_input.text
         assistant_id = "conversation"
         options = self.entry.options
-        configured_agent_id = _normalize_agent_id(
+        voice_agent_id = self._normalize_optional_text(
+            options.get(CONF_VOICE_AGENT_ID)
+        )
+        configured_agent_id = self._normalize_optional_text(
             options.get(
                 CONF_AGENT_ID,
-                self.entry.data.get(CONF_AGENT_ID),
-            ),
+                self.entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
+            )
         )
-        resolved_agent_id = configured_agent_id
+        resolved_agent_id = voice_agent_id or configured_agent_id
         conversation_id = self._resolve_conversation_id(user_input, resolved_agent_id)
-        active_model = _normalize_active_model(options.get("active_model"))
+        active_model = self._normalize_optional_text(options.get("active_model"))
         include_context = options.get(
             CONF_INCLUDE_EXPOSED_CONTEXT,
             DEFAULT_INCLUDE_EXPOSED_CONTEXT,
@@ -258,7 +237,16 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         agent_id: str | None,
     ) -> str:
         """Return conversation id from HA with conservative agent namespacing."""
-        agent_suffix = _normalize_agent_id(agent_id)
+        configured_session_id = self._normalize_optional_text(
+            self.entry.options.get(
+                CONF_ASSIST_SESSION_ID,
+                DEFAULT_ASSIST_SESSION_ID,
+            )
+        )
+        if configured_session_id:
+            return configured_session_id
+
+        agent_suffix = self._normalize_optional_text(agent_id)
 
         if user_input.conversation_id:
             if agent_suffix:

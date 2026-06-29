@@ -25,7 +25,9 @@
     },
     "error": {
       "cannot_connect": "Cannot connect to the OpenClaw gateway. Ensure the addon is running.",
-      "invalid_auth": "Invalid gateway token. Check your OpenClaw configuration.",      "ssl_error": "SSL certificate verification failed. If using self-signed certificates (e.g. lan_https mode), uncheck 'Verify SSL certificate' or use automatic discovery.",      "openai_api_disabled": "The gateway returned an unexpected response — the OpenAI-compatible API is likely disabled. In the OpenClaw addon settings enable 'enable_openai_api', restart the addon, and try again.",
+      "invalid_auth": "Invalid gateway token. Check your OpenClaw configuration.",
+      "ssl_error": "SSL certificate verification failed. If using self-signed certificates (e.g. lan_https mode), uncheck 'Verify SSL certificate' or use automatic discovery.",
+      "openai_api_disabled": "The gateway returned an unexpected response — the OpenAI-compatible API is likely disabled. In the OpenClaw addon settings enable 'enable_openai_api', restart the addon, and try again.",
       "unknown": "An unexpected error occurred."
     },
     "abort": {
@@ -38,11 +40,18 @@
         "title": "OpenClaw Options",
         "description": "Configure context and tool-calling behavior.",
         "data": {
-          "agent_id": "Agent ID",
+          "agent_id": "Agent ID (e.g. main)",
+          "voice_agent_id": "Voice agent ID (optional)",
+          "assist_session_id": "Assist session ID override (optional)",
           "include_exposed_context": "Include exposed entities context",
           "context_max_chars": "Max context characters",
           "context_strategy": "When context exceeds max",
           "enable_tool_calls": "Enable tool calls (execute services)",
+          "wake_word_enabled": "Require wake word",
+          "wake_word": "Wake word",
+          "allow_brave_webspeech": "Allow Web Speech in Brave (experimental)",
+          "voice_provider": "Voice input provider (browser or HA STT)",
+          "browser_voice_language": "Browser voice language",
           "thinking_timeout": "Response timeout (seconds)"
         }
       }
@@ -120,7 +129,7 @@
         },
         "agent_id": {
           "name": "Agent ID",
-          "description": "Optional OpenClaw agent ID to route this message to. Overrides the configured agent from integration settings."
+          "description": "Optional OpenClaw agent ID to route this message to. Overrides the configured default. Defaults to \"main\"."
         }
       }
     },

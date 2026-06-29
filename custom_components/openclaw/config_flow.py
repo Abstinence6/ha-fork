@@ -37,6 +37,7 @@ from .const import (
     ADDON_SLUG_FRAGMENTS,
     CONF_ADDON_CONFIG_PATH,
     CONF_AGENT_ID,
+    CONF_ASSIST_SESSION_ID,
     CONF_GATEWAY_HOST,
     CONF_GATEWAY_PORT,
     CONF_GATEWAY_TOKEN,
@@ -46,7 +47,14 @@ from .const import (
     CONF_CONTEXT_STRATEGY,
     CONF_ENABLE_TOOL_CALLS,
     CONF_INCLUDE_EXPOSED_CONTEXT,
+    CONF_WAKE_WORD,
+    CONF_WAKE_WORD_ENABLED,
+    CONF_VOICE_AGENT_ID,
+    CONF_ALLOW_BRAVE_WEBSPEECH,
+    CONF_BROWSER_VOICE_LANGUAGE,
+    CONF_VOICE_PROVIDER,
     CONF_THINKING_TIMEOUT,
+    BROWSER_VOICE_LANGUAGES,
     CONTEXT_STRATEGY_CLEAR,
     CONTEXT_STRATEGY_TRUNCATE,
     DEFAULT_GATEWAY_HOST,
@@ -55,8 +63,15 @@ from .const import (
     DEFAULT_CONTEXT_STRATEGY,
     DEFAULT_ENABLE_TOOL_CALLS,
     DEFAULT_INCLUDE_EXPOSED_CONTEXT,
+    DEFAULT_WAKE_WORD,
+    DEFAULT_WAKE_WORD_ENABLED,
+    DEFAULT_ALLOW_BRAVE_WEBSPEECH,
+    DEFAULT_BROWSER_VOICE_LANGUAGE,
+    DEFAULT_VOICE_PROVIDER,
     DEFAULT_THINKING_TIMEOUT,
+    DEFAULT_VOICE_AGENT_ID,
     DEFAULT_AGENT_ID,
+    DEFAULT_ASSIST_SESSION_ID,
     DOMAIN,
     OPENCLAW_CONFIG_REL_PATH,
 )
@@ -445,6 +460,7 @@ class OpenClawOptionsFlow(OptionsFlowWithReload):
             return self.async_create_entry(title="", data=user_input)
 
         options = self._config_entry.options
+        selected_provider = options.get(CONF_VOICE_PROVIDER, DEFAULT_VOICE_PROVIDER)
 
         schema: dict[Any, Any] = {
             vol.Optional(
@@ -452,6 +468,20 @@ class OpenClawOptionsFlow(OptionsFlowWithReload):
                 default=options.get(
                     CONF_AGENT_ID,
                     self._config_entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
+                ),
+            ): str,
+            vol.Optional(
+                CONF_VOICE_AGENT_ID,
+                default=options.get(
+                    CONF_VOICE_AGENT_ID,
+                    DEFAULT_VOICE_AGENT_ID,
+                ),
+            ): str,
+            vol.Optional(
+                CONF_ASSIST_SESSION_ID,
+                default=options.get(
+                    CONF_ASSIST_SESSION_ID,
+                    DEFAULT_ASSIST_SESSION_ID,
                 ),
             ): str,
             vol.Optional(
@@ -483,6 +513,31 @@ class OpenClawOptionsFlow(OptionsFlowWithReload):
                 ),
             ): bool,
             vol.Optional(
+                CONF_WAKE_WORD_ENABLED,
+                default=options.get(
+                    CONF_WAKE_WORD_ENABLED,
+                    DEFAULT_WAKE_WORD_ENABLED,
+                ),
+            ): bool,
+            vol.Optional(
+                CONF_WAKE_WORD,
+                default=options.get(
+                    CONF_WAKE_WORD,
+                    DEFAULT_WAKE_WORD,
+                ),
+            ): str,
+            vol.Optional(
+                CONF_ALLOW_BRAVE_WEBSPEECH,
+                default=options.get(
+                    CONF_ALLOW_BRAVE_WEBSPEECH,
+                    DEFAULT_ALLOW_BRAVE_WEBSPEECH,
+                ),
+            ): bool,
+            vol.Optional(
+                CONF_VOICE_PROVIDER,
+                default=selected_provider,
+            ): vol.In(["browser", "assist_stt"]),
+            vol.Optional(
                 CONF_THINKING_TIMEOUT,
                 default=options.get(
                     CONF_THINKING_TIMEOUT,
@@ -490,5 +545,16 @@ class OpenClawOptionsFlow(OptionsFlowWithReload):
                 ),
             ): vol.All(int, vol.Range(min=10, max=3600)),
         }
+
+        if selected_provider == "browser":
+            schema[
+                vol.Optional(
+                    CONF_BROWSER_VOICE_LANGUAGE,
+                    default=options.get(
+                        CONF_BROWSER_VOICE_LANGUAGE,
+                        DEFAULT_BROWSER_VOICE_LANGUAGE,
+                    ),
+                )
+            ] = vol.In(BROWSER_VOICE_LANGUAGES)
 
         return self.async_show_form(step_id="init", data_schema=vol.Schema(schema))
