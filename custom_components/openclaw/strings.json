@@ -38,8 +38,8 @@
         "title": "OpenClaw Options",
         "description": "Configure context and tool-calling behavior.",
         "data": {
-          "agent_id": "Agent ID (e.g. main)",
-          "voice_agent_id": "Voice agent ID (optional)",
+          "agent_id": "Agent ID (e.g. smart-home)",
+          "voice_agent_id": "Voice agent ID (optional, defaults to Agent ID)",
           "assist_session_id": "Assist session ID override (optional)",
           "include_exposed_context": "Include exposed entities context",
           "context_max_chars": "Max context characters",
@@ -127,7 +127,7 @@
         },
         "agent_id": {
           "name": "Agent ID",
-          "description": "Optional OpenClaw agent ID to route this message to. Overrides the configured default. Defaults to \"main\"."
+          "description": "Optional OpenClaw agent ID to route this message to. Overrides the configured default. Defaults to \"smart-home\"."
         }
       }
     },

@@ -2,6 +2,12 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.65] - 2026-06-29
+
+### Fixed
+- Migrated existing OpenClaw config entries away from the legacy `main` and `ha-smart-home` agent IDs so both Assist and the chat card resolve to `smart-home` by default after upgrade.
+- Updated the chat-card resource cache-bust version so browsers pick up the new settings and routing behavior immediately after the integration refreshes.
+
 ## [0.1.63] - 2026-05-31
 
 ### Fixed

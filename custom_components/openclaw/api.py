@@ -51,7 +51,7 @@ class OpenClawApiClient:
         use_ssl: bool = False,
         verify_ssl: bool = True,
         session: aiohttp.ClientSession | None = None,
-        agent_id: str = "main",
+        agent_id: str = "smart-home",
     ) -> None:
         """Initialize the API client.
 
@@ -62,7 +62,7 @@ class OpenClawApiClient:
             use_ssl: Use HTTPS instead of HTTP.
             verify_ssl: Verify SSL certificates (set False for self-signed certs).
             session: Optional aiohttp session (reused from HA).
-            agent_id: Target OpenClaw agent ID (default: "main").
+            agent_id: Target OpenClaw agent ID (default: "smart-home").
         """
         self._host = host
         self._port = port
@@ -91,7 +91,7 @@ class OpenClawApiClient:
         extra_headers: dict[str, str] | None = None,
     ) -> dict[str, str]:
         """Build request headers with auth token and agent ID."""
-        effective_agent = agent_id or self._agent_id or "main"
+        effective_agent = agent_id or self._agent_id or "smart-home"
         headers = {
             "Authorization": f"Bearer {self._token}",
             "Content-Type": "application/json",

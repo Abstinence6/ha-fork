@@ -107,9 +107,74 @@ _CARD_PATH = Path(__file__).parent / "www" / _CARD_FILENAME
 # URL at which the card JS is served (registered via register_static_path)
 _CARD_STATIC_URL = f"/openclaw/{_CARD_FILENAME}"
 # Versioned URL used for Lovelace resource registration to avoid stale browser cache
-_CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.63"
+_CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.65"
+
+_LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
 
 OpenClawConfigEntry = ConfigEntry
+
+
+def _normalize_agent_id(value: Any, fallback: str) -> str:
+    """Normalize agent ids and remap legacy defaults to the new smart-home agent."""
+    if not isinstance(value, str):
+        return fallback
+
+    cleaned = value.strip()
+    if not cleaned or cleaned in _LEGACY_AGENT_IDS:
+        return fallback
+
+    return cleaned
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old config entry defaults to the smart-home agent.
+
+    Earlier releases defaulted to `main` for text/chat and `ha-smart-home`
+    for voice. That left existing installs pinned to the wrong agent even
+    after the integration code changed. This migration rewrites those legacy
+    values to `smart-home` so HA Assist and the chat card converge on the same
+    routed agent without requiring manual options changes.
+    """
+    if entry.version >= 2:
+        return True
+
+    new_data = dict(entry.data)
+    new_options = dict(entry.options)
+    updated = False
+
+    resolved_agent_id = _normalize_agent_id(
+        new_options.get(CONF_AGENT_ID, new_data.get(CONF_AGENT_ID)),
+        DEFAULT_AGENT_ID,
+    )
+    if new_data.get(CONF_AGENT_ID) != resolved_agent_id:
+        new_data[CONF_AGENT_ID] = resolved_agent_id
+        updated = True
+
+    if new_options.get(CONF_AGENT_ID) != resolved_agent_id:
+        new_options[CONF_AGENT_ID] = resolved_agent_id
+        updated = True
+
+    resolved_voice_agent_id = _normalize_agent_id(
+        new_options.get(CONF_VOICE_AGENT_ID),
+        resolved_agent_id,
+    )
+    if new_options.get(CONF_VOICE_AGENT_ID) != resolved_voice_agent_id:
+        new_options[CONF_VOICE_AGENT_ID] = resolved_voice_agent_id
+        updated = True
+
+    if updated:
+        hass.config_entries.async_update_entry(
+            entry,
+            data=new_data,
+            options=new_options,
+        )
+        _LOGGER.info(
+            "Migrated OpenClaw config entry to agent_id=%s voice_agent_id=%s",
+            resolved_agent_id,
+            resolved_voice_agent_id,
+        )
+
+    return True
 
 
 # Service call schemas

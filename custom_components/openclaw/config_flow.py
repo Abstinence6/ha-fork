@@ -298,7 +298,7 @@ async def _async_validate_connection(
 class OpenClawConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for OpenClaw."""
 
-    VERSION = 1
+    VERSION = 2
 
     @staticmethod
     def async_get_options_flow(config_entry: ConfigEntry) -> OpenClawOptionsFlow:
