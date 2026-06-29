@@ -119,7 +119,6 @@ class OpenClawChatCard extends HTMLElement {
       show_voice_button: config.show_voice_button !== false,
       show_clear_button: config.show_clear_button !== false,
       allow_brave_webspeech: config.allow_brave_webspeech === true,
-      voice_provider: config.voice_provider || null,
       session_id: config.session_id || null,
       thinking_timeout: config.thinking_timeout ?? 120,
       ...config,
@@ -257,7 +256,7 @@ class OpenClawChatCard extends HTMLElement {
 
     // Check if this event is for our session
     const sessionId = this._getSessionId();
-    if (data.session_id && data.session_id !== sessionId) return;
+    if (sessionId && data.session_id && data.session_id !== sessionId) return;
 
     const signature = `${sessionId}|${data.timestamp || ""}|${String(data.message)}`;
     if (signature === this._lastAssistantEventSignature) {
@@ -315,7 +314,7 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getSessionId() {
-    return this._config.session_id || this._integrationAssistSessionId || "default";
+    return this._config.session_id || this._integrationAssistSessionId || "";
   }
 
   _getAgentId(source = null) {
@@ -358,12 +357,12 @@ class OpenClawChatCard extends HTMLElement {
       if (typeof this._hass.callWS === "function") {
         result = await this._hass.callWS({
           type: "openclaw/get_history",
-          session_id: sessionId,
+          session_id: sessionId || undefined,
         });
       } else {
         result = await this._hass.connection.sendMessagePromise({
           type: "openclaw/get_history",
-          session_id: sessionId,
+          session_id: sessionId || undefined,
         });
       }
 
@@ -703,10 +702,6 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getVoiceProvider() {
-    const configured = this._config.voice_provider;
-    if (configured === "assist_stt" || configured === "browser") {
-      return configured;
-    }
     return this._voiceProviderIntegration || "browser";
   }
 

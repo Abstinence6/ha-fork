@@ -209,7 +209,6 @@ height: 500px
 show_timestamps: true
 show_voice_button: true
 show_clear_button: true
-session_id: default
 ```
 
 Minimal config:
@@ -254,8 +253,8 @@ When enabled, OpenClaw tool-call responses can execute Home Assistant services.
 
 - **Wake word enabled**
 - **Wake word** (default: `hey openclaw`)
-- **Voice input provider** (`browser` or `assist_stt`)
 - **Voice agent ID** (optional)
+- **Voice input provider** is read from the integration settings and applies to the card automatically.
 
 ### Model selection
 
@@ -352,7 +351,7 @@ data:
   tool: sessions_list
   action: json
   args: {}
-  session_key: smart-home:default
+  session_key: "<agent_id>:<session_id>"
 ```
 
 ---
