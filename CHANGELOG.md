@@ -2,6 +2,11 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.71] - 2026-06-29
+
+### Fixed
+- Fall back to non-streaming Assist responses when the gateway closes an SSE stream early, preventing raw `ClientPayloadError` failures in HA Assist while preserving the configured smart-home session route.
+
 ## [0.1.70] - 2026-06-29
 
 ### Fixed

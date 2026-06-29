@@ -280,7 +280,12 @@ class OpenClawApiClient:
                     raise OpenClawApiError(f"Chat error {resp.status}: {text[:200]}")
                 return await resp.json()
 
-        except (aiohttp.ClientConnectorError, aiohttp.ClientOSError, asyncio.TimeoutError) as err:
+        except (
+            aiohttp.ClientConnectorError,
+            aiohttp.ClientOSError,
+            aiohttp.ClientPayloadError,
+            asyncio.TimeoutError,
+        ) as err:
             raise OpenClawConnectionError(
                 f"Cannot connect to OpenClaw gateway: {err}"
             ) from err
@@ -370,7 +375,12 @@ class OpenClawApiClient:
                     except json.JSONDecodeError:
                         _LOGGER.debug("Skipping non-JSON SSE line: %s", data_str[:100])
 
-        except (aiohttp.ClientConnectorError, aiohttp.ClientOSError, asyncio.TimeoutError) as err:
+        except (
+            aiohttp.ClientConnectorError,
+            aiohttp.ClientOSError,
+            aiohttp.ClientPayloadError,
+            asyncio.TimeoutError,
+        ) as err:
             raise OpenClawConnectionError(
                 f"Cannot connect to OpenClaw gateway: {err}"
             ) from err

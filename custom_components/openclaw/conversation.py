@@ -313,15 +313,18 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
     ) -> str:
         """Get a response from OpenClaw, trying streaming first."""
         full_response = ""
-        async for chunk in client.async_stream_message(
-            message=message,
-            session_id=conversation_id,
-            model=model,
-            system_prompt=system_prompt,
-            agent_id=agent_id,
-            extra_headers=_VOICE_REQUEST_HEADERS,
-        ):
-            full_response += chunk
+        try:
+            async for chunk in client.async_stream_message(
+                message=message,
+                session_id=conversation_id,
+                model=model,
+                system_prompt=system_prompt,
+                agent_id=agent_id,
+                extra_headers=_VOICE_REQUEST_HEADERS,
+            ):
+                full_response += chunk
+        except OpenClawApiError as err:
+            _LOGGER.warning("OpenClaw streaming failed, falling back: %s", err)
 
         if full_response:
             return _scrub_tool_code_fences(full_response)
