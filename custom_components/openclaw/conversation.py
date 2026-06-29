@@ -63,8 +63,7 @@ _VOICE_REQUEST_HEADERS = {
     "x-openclaw-message-channel": "voice",
 }
 
-_LEGACY_SMART_HOME_AGENT_ID = "".join(("ha-", "smart", "-", "home"))
-_LEGACY_AGENT_IDS = {"main", _LEGACY_SMART_HOME_AGENT_ID}
+_LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
 
 
 def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
@@ -78,7 +77,7 @@ def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
 
     return cleaned
 
-_LEGACY_ACTIVE_MODELS = {"openclaw", "main", _LEGACY_SMART_HOME_AGENT_ID}
+_LEGACY_ACTIVE_MODELS = {"openclaw", "main", "ha-smart-home"}
 
 
 def _normalize_active_model(value: Any) -> str | None:

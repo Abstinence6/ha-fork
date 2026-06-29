@@ -21,9 +21,9 @@ send_message:
       name: Agent ID
       description: >
         Optional OpenClaw agent ID to route this message to. Overrides the
-        agent ID configured in the integration options. Defaults to "openclaw".
+        agent ID configured in the integration options. Defaults to "smart-home".
       required: false
-      example: "openclaw"
+      example: "smart-home"
       selector:
         text:
 
@@ -66,7 +66,7 @@ invoke_tool:
       name: Session Key
       description: Optional target OpenClaw session key.
       required: false
-      example: "openclaw:default"
+      example: "smart-home:default"
       selector:
         text:
     dry_run:

@@ -5,7 +5,7 @@ All notable changes to the OpenClaw Home Assistant Integration will be documente
 ## [0.1.71] - 2026-06-29
 
 ### Fixed
-- Fall back to non-streaming Assist responses when the gateway closes an SSE stream early, preventing raw `ClientPayloadError` failures in HA Assist while preserving the configured session route.
+- Fall back to non-streaming Assist responses when the gateway closes an SSE stream early, preventing raw `ClientPayloadError` failures in HA Assist while preserving the configured smart-home session route.
 
 ## [0.1.70] - 2026-06-29
 
@@ -15,29 +15,29 @@ All notable changes to the OpenClaw Home Assistant Integration will be documente
 ## [0.1.69] - 2026-06-29
 
 ### Fixed
-- Fixed the `openclaw/get_settings` websocket endpoint after the routing migration so the Lovelace card can receive normalized `agent_id`, `voice_agent_id`, and session settings again.
-- Treat the bare `openclaw` model as a legacy/base model override and ignore it for routing, allowing the configured agent to drive chat-card and Assist requests.
+- Fixed the `openclaw/get_settings` websocket endpoint after the smart-home routing migration so the Lovelace card can receive normalized `agent_id`, `voice_agent_id`, and session settings again.
+- Treat the bare `openclaw` model as a legacy/base model override and ignore it for routing, allowing the configured `smart-home` agent to drive chat-card and Assist requests.
 - Aligned the backend Lovelace resource cache-bust URL with the current integration version.
 
 ## [0.1.68] - 2026-06-29
 
 ### Fixed
-- Normalized `agent_id`, `voice_agent_id`, and legacy `active_model` values at runtime so old entries can no longer override the intended routing in either Assist or the chat card.
+- Normalized `agent_id`, `voice_agent_id`, and legacy `active_model` values at runtime so old `main`/`ha-smart-home` entries can no longer override the intended `smart-home` routing in either Assist or the chat card.
 
 ## [0.1.67] - 2026-06-29
 
 ### Fixed
-- Ignore legacy `active_model = main` overrides so the integration falls back to the configured agent instead of being pinned to the old default model.
+- Ignore legacy `active_model = main` and `active_model = ha-smart-home` overrides so the integration falls back to the configured `smart-home` agent instead of being pinned to the old default model.
 
 ## [0.1.66] - 2026-06-29
 
 ### Fixed
-- Bumped config entry migration again so Home Assistant instances already on integration version 2 still migrate legacy `main` agent IDs to the configured default agent.
+- Bumped config entry migration again so Home Assistant instances already on integration version 2 still migrate legacy `main` and `ha-smart-home` agent IDs to `smart-home`.
 
 ## [0.1.65] - 2026-06-29
 
 ### Fixed
-- Migrated existing OpenClaw config entries away from the legacy `main` agent ID so both Assist and the chat card resolve to the configured default after upgrade.
+- Migrated existing OpenClaw config entries away from the legacy `main` and `ha-smart-home` agent IDs so both Assist and the chat card resolve to `smart-home` by default after upgrade.
 - Updated the chat-card resource cache-bust version so browsers pick up the new settings and routing behavior immediately after the integration refreshes.
 
 ## [0.1.63] - 2026-05-31
