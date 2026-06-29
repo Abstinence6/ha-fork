@@ -63,6 +63,20 @@ _VOICE_REQUEST_HEADERS = {
     "x-openclaw-message-channel": "voice",
 }
 
+_LEGACY_ACTIVE_MODELS = {"main", "ha-smart-home"}
+
+
+def _normalize_active_model(value: Any) -> str | None:
+    """Return an explicit model override, ignoring legacy routing defaults."""
+    if not isinstance(value, str):
+        return None
+
+    cleaned = value.strip()
+    if not cleaned or cleaned in _LEGACY_ACTIVE_MODELS:
+        return None
+
+    return cleaned
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -146,7 +160,7 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         )
         resolved_agent_id = voice_agent_id or configured_agent_id
         conversation_id = self._resolve_conversation_id(user_input, resolved_agent_id)
-        active_model = self._normalize_optional_text(options.get("active_model"))
+        active_model = _normalize_active_model(options.get("active_model"))
         include_context = options.get(
             CONF_INCLUDE_EXPOSED_CONTEXT,
             DEFAULT_INCLUDE_EXPOSED_CONTEXT,

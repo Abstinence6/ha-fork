@@ -2,6 +2,11 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.67] - 2026-06-29
+
+### Fixed
+- Ignore legacy `active_model = main` and `active_model = ha-smart-home` overrides so the integration falls back to the configured `smart-home` agent instead of being pinned to the old default model.
+
 ## [0.1.66] - 2026-06-29
 
 ### Fixed

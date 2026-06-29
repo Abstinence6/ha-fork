@@ -110,6 +110,7 @@ _CARD_STATIC_URL = f"/openclaw/{_CARD_FILENAME}"
 _CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.65"
 
 _LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
+_LEGACY_ACTIVE_MODELS = {"main", "ha-smart-home"}
 
 OpenClawConfigEntry = ConfigEntry
 
@@ -122,6 +123,24 @@ def _normalize_agent_id(value: Any, fallback: str) -> str:
     cleaned = value.strip()
     if not cleaned or cleaned in _LEGACY_AGENT_IDS:
         return fallback
+
+    return cleaned
+
+
+def _normalize_active_model(value: Any) -> str | None:
+    """Return a usable explicit model override or None.
+
+    Legacy installs may have stored plain `main`/`ha-smart-home` as the
+    "active model" option. Those values are routing defaults, not real model
+    overrides, so we intentionally drop them and let the configured agent ID
+    control the request instead.
+    """
+    if not isinstance(value, str):
+        return None
+
+    cleaned = value.strip()
+    if not cleaned or cleaned in _LEGACY_ACTIVE_MODELS:
+        return None
 
     return cleaned
 
@@ -160,6 +179,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     if new_options.get(CONF_VOICE_AGENT_ID) != resolved_voice_agent_id:
         new_options[CONF_VOICE_AGENT_ID] = resolved_voice_agent_id
+        updated = True
+
+    active_model = _normalize_active_model(new_options.get("active_model"))
+    if new_options.get("active_model") != active_model:
+        if active_model is None:
+            new_options.pop("active_model", None)
+        else:
+            new_options["active_model"] = active_model
         updated = True
 
     if updated:
@@ -520,7 +547,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             )
             system_prompt = apply_context_policy(raw_context, max_chars, strategy)
 
-            active_model = _normalize_optional_text(options.get("active_model"))
+            active_model = _normalize_active_model(options.get("active_model"))
 
             _append_chat_history(hass, session_id, "user", message)
 
@@ -897,6 +924,7 @@ def _async_register_websocket_api(hass: HomeAssistant) -> None:
                     CONF_VOICE_AGENT_ID,
                     DEFAULT_VOICE_AGENT_ID,
                 ),
+                "active_model": _normalize_active_model(options.get("active_model")),
                 CONF_ASSIST_SESSION_ID: options.get(
                     CONF_ASSIST_SESSION_ID,
                     DEFAULT_ASSIST_SESSION_ID,
