@@ -241,9 +241,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenClawConfigEntry) -> 
     use_ssl = entry.data.get(CONF_USE_SSL, False)
     verify_ssl = entry.data.get(CONF_VERIFY_SSL, True)
     session = async_get_clientsession(hass, verify_ssl=verify_ssl)
-    agent_id: str = entry.options.get(
-        CONF_AGENT_ID,
-        entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
+    agent_id: str = _normalize_agent_id(
+        entry.options.get(
+            CONF_AGENT_ID,
+            entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
+        ),
+        DEFAULT_AGENT_ID,
     )
 
     client = OpenClawApiClient(
@@ -502,7 +505,10 @@ def _async_register_services(hass: HomeAssistant) -> None:
         message: str = call.data[ATTR_MESSAGE]
         source: str | None = call.data.get(ATTR_SOURCE)
         session_id: str = call.data.get(ATTR_SESSION_ID) or "default"
-        call_agent_id = _normalize_optional_text(call.data.get(ATTR_AGENT_ID))
+        call_agent_id = _normalize_agent_id(
+            call.data.get(ATTR_AGENT_ID),
+            DEFAULT_AGENT_ID,
+        )
         extra_headers = _VOICE_REQUEST_HEADERS if source == "voice" else None
 
         entry_data = _get_first_entry_data(hass)
@@ -513,14 +519,16 @@ def _async_register_services(hass: HomeAssistant) -> None:
         client: OpenClawApiClient = entry_data["client"]
         coordinator: OpenClawCoordinator = entry_data["coordinator"]
         options = _get_entry_options(hass, entry_data)
-        voice_agent_id = _normalize_optional_text(
-            options.get(CONF_VOICE_AGENT_ID, DEFAULT_VOICE_AGENT_ID)
+        voice_agent_id = _normalize_agent_id(
+            options.get(CONF_VOICE_AGENT_ID, DEFAULT_VOICE_AGENT_ID),
+            DEFAULT_AGENT_ID,
         )
-        configured_agent_id = _normalize_optional_text(
+        configured_agent_id = _normalize_agent_id(
             options.get(
                 CONF_AGENT_ID,
                 entry_data["entry"].data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
-            )
+            ),
+            DEFAULT_AGENT_ID,
         )
         resolved_agent_id = call_agent_id
         if resolved_agent_id is None:
@@ -916,13 +924,19 @@ def _async_register_websocket_api(hass: HomeAssistant) -> None:
         connection.send_result(
             msg["id"],
             {
-                CONF_AGENT_ID: options.get(
-                    CONF_AGENT_ID,
+                CONF_AGENT_ID: _normalize_agent_id(
+                    options.get(
+                        CONF_AGENT_ID,
+                        DEFAULT_AGENT_ID,
+                    ),
                     DEFAULT_AGENT_ID,
                 ),
-                CONF_VOICE_AGENT_ID: options.get(
-                    CONF_VOICE_AGENT_ID,
-                    DEFAULT_VOICE_AGENT_ID,
+                CONF_VOICE_AGENT_ID: _normalize_agent_id(
+                    options.get(
+                        CONF_VOICE_AGENT_ID,
+                        DEFAULT_VOICE_AGENT_ID,
+                    ),
+                    DEFAULT_AGENT_ID,
                 ),
                 "active_model": _normalize_active_model(options.get("active_model")),
                 CONF_ASSIST_SESSION_ID: options.get(

@@ -2,6 +2,11 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.68] - 2026-06-29
+
+### Fixed
+- Normalized `agent_id`, `voice_agent_id`, and legacy `active_model` values at runtime so old `main`/`ha-smart-home` entries can no longer override the intended `smart-home` routing in either Assist or the chat card.
+
 ## [0.1.67] - 2026-06-29
 
 ### Fixed

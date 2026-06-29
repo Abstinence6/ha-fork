@@ -63,6 +63,20 @@ _VOICE_REQUEST_HEADERS = {
     "x-openclaw-message-channel": "voice",
 }
 
+_LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
+
+
+def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
+    """Return a usable agent id, dropping legacy defaults."""
+    if not isinstance(value, str):
+        return fallback
+
+    cleaned = value.strip()
+    if not cleaned or cleaned in _LEGACY_AGENT_IDS:
+        return fallback
+
+    return cleaned
+
 _LEGACY_ACTIVE_MODELS = {"main", "ha-smart-home"}
 
 
@@ -149,14 +163,15 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         message = user_input.text
         assistant_id = "conversation"
         options = self.entry.options
-        voice_agent_id = self._normalize_optional_text(
-            options.get(CONF_VOICE_AGENT_ID)
+        voice_agent_id = _normalize_agent_id(
+            options.get(CONF_VOICE_AGENT_ID),
         )
-        configured_agent_id = self._normalize_optional_text(
+        configured_agent_id = _normalize_agent_id(
             options.get(
                 CONF_AGENT_ID,
                 self.entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
-            )
+            ),
+            DEFAULT_AGENT_ID,
         )
         resolved_agent_id = voice_agent_id or configured_agent_id
         conversation_id = self._resolve_conversation_id(user_input, resolved_agent_id)
@@ -260,7 +275,7 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         if configured_session_id:
             return configured_session_id
 
-        agent_suffix = self._normalize_optional_text(agent_id)
+        agent_suffix = _normalize_agent_id(agent_id)
 
         if user_input.conversation_id:
             if agent_suffix:
