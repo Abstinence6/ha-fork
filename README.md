@@ -352,7 +352,7 @@ data:
   tool: sessions_list
   action: json
   args: {}
-  session_key: smart-home:default
+  session_key: openclaw:default
 ```
 
 ---

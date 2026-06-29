@@ -13,6 +13,7 @@ from .const import (
     API_CHAT_COMPLETIONS,
     API_MODELS,
     API_TOOLS_INVOKE,
+    DEFAULT_AGENT_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ class OpenClawApiClient:
         use_ssl: bool = False,
         verify_ssl: bool = True,
         session: aiohttp.ClientSession | None = None,
-        agent_id: str = "smart-home",
+        agent_id: str = DEFAULT_AGENT_ID,
     ) -> None:
         """Initialize the API client.
 
@@ -62,7 +63,7 @@ class OpenClawApiClient:
             use_ssl: Use HTTPS instead of HTTP.
             verify_ssl: Verify SSL certificates (set False for self-signed certs).
             session: Optional aiohttp session (reused from HA).
-            agent_id: Target OpenClaw agent ID (default: "smart-home").
+            agent_id: Target OpenClaw agent ID (default: "openclaw").
         """
         self._host = host
         self._port = port
@@ -91,7 +92,7 @@ class OpenClawApiClient:
         extra_headers: dict[str, str] | None = None,
     ) -> dict[str, str]:
         """Build request headers with auth token and agent ID."""
-        effective_agent = agent_id or self._agent_id or "smart-home"
+        effective_agent = agent_id or self._agent_id or DEFAULT_AGENT_ID
         headers = {
             "Authorization": f"Bearer {self._token}",
             "Content-Type": "application/json",
@@ -117,7 +118,7 @@ class OpenClawApiClient:
         if cleaned.startswith("agent:"):
             return cleaned
 
-        effective_agent = agent_id or self._agent_id or "smart-home"
+        effective_agent = agent_id or self._agent_id or DEFAULT_AGENT_ID
         return f"agent:{effective_agent}:{cleaned}"
 
     async def _get_session(self) -> aiohttp.ClientSession:

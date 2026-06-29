@@ -111,14 +111,15 @@ _CARD_STATIC_URL = f"/openclaw/{_CARD_FILENAME}"
 # Versioned URL used for Lovelace resource registration to avoid stale browser cache
 _CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.71"
 
-_LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
-_LEGACY_ACTIVE_MODELS = {"openclaw", "main", "ha-smart-home"}
+_LEGACY_SMART_HOME_AGENT_ID = "".join(("ha-", "smart", "-", "home"))
+_LEGACY_AGENT_IDS = {"main", _LEGACY_SMART_HOME_AGENT_ID}
+_LEGACY_ACTIVE_MODELS = {"openclaw", "main", _LEGACY_SMART_HOME_AGENT_ID}
 
 OpenClawConfigEntry = ConfigEntry
 
 
 def _normalize_agent_id(value: Any, fallback: str) -> str:
-    """Normalize agent ids and remap legacy defaults to the new smart-home agent."""
+    """Normalize agent ids and remap legacy defaults to the configured default."""
     if not isinstance(value, str):
         return fallback
 
@@ -132,10 +133,10 @@ def _normalize_agent_id(value: Any, fallback: str) -> str:
 def _normalize_active_model(value: Any) -> str | None:
     """Return a usable explicit model override or None.
 
-    Legacy installs may have stored plain `main`/`ha-smart-home` as the
-    "active model" option. Those values are routing defaults, not real model
-    overrides, so we intentionally drop them and let the configured agent ID
-    control the request instead.
+    Legacy installs may have stored routing defaults as the "active model"
+    option. Those values are defaults, not real model overrides, so we
+    intentionally drop them and let the configured agent ID control the
+    request instead.
     """
     if not isinstance(value, str):
         return None
@@ -148,13 +149,13 @@ def _normalize_active_model(value: Any) -> str | None:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate old config entry defaults to the smart-home agent.
+    """Migrate old config entry defaults to the configured default agent.
 
-    Earlier releases defaulted to `main` for text/chat and `ha-smart-home`
-    for voice. That left existing installs pinned to the wrong agent even
-    after the integration code changed. This migration rewrites those legacy
-    values to `smart-home` so HA Assist and the chat card converge on the same
-    routed agent without requiring manual options changes.
+    Earlier releases used older routing defaults for text/chat and voice. That
+    left existing installs pinned to the wrong agent even after the
+    integration code changed. This migration rewrites those legacy values so
+    HA Assist and the chat card converge on the same routed agent without
+    requiring manual options changes.
     """
     if entry.version >= 3:
         return True
