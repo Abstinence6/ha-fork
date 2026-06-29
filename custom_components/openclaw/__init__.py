@@ -109,8 +109,8 @@ _CARD_STATIC_URL = f"/openclaw/{_CARD_FILENAME}"
 # Versioned URL used for Lovelace resource registration to avoid stale browser cache
 _CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.71"
 
-_LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
-_LEGACY_ACTIVE_MODELS = {"openclaw", "main", "ha-smart-home"}
+_LEGACY_AGENT_IDS = {"main"}
+_LEGACY_ACTIVE_MODELS = {"openclaw", "main"}
 
 OpenClawConfigEntry = ConfigEntry
 
@@ -130,10 +130,10 @@ def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
 def _normalize_active_model(value: Any) -> str | None:
     """Return a usable explicit model override or None.
 
-    Legacy installs may have stored plain `main`/`ha-smart-home` as the
-    "active model" option. Those values are routing defaults, not real model
-    overrides, so we intentionally drop them and let the configured agent ID
-    control the request instead.
+    Legacy installs may have stored plain routing defaults in the
+    "active model" option. Those values are not real model overrides, so we
+    intentionally drop them and let the configured agent ID control the
+    request instead.
     """
     if not isinstance(value, str):
         return None
@@ -146,14 +146,7 @@ def _normalize_active_model(value: Any) -> str | None:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate old config entry defaults to the smart-home agent.
-
-    Earlier releases defaulted to `main` for text/chat and `ha-smart-home`
-    for voice. That left existing installs pinned to the wrong agent even
-    after the integration code changed. This migration rewrites those legacy
-    values to `smart-home` so HA Assist and the chat card converge on the same
-    routed agent without requiring manual options changes.
-    """
+    """Migrate old config entry defaults to the configured agent."""
     if entry.version >= 3:
         return True
 
@@ -163,6 +156,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     resolved_agent_id = _normalize_agent_id(
         new_options.get(CONF_AGENT_ID, new_data.get(CONF_AGENT_ID)),
+        DEFAULT_AGENT_ID,
     )
     if new_data.get(CONF_AGENT_ID) != resolved_agent_id:
         new_data[CONF_AGENT_ID] = resolved_agent_id
