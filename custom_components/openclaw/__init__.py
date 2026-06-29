@@ -824,6 +824,18 @@ def _async_register_websocket_api(hass: HomeAssistant) -> None:
         connection.send_result(
             msg["id"],
             {
+                CONF_AGENT_ID: options.get(
+                    CONF_AGENT_ID,
+                    DEFAULT_AGENT_ID,
+                ),
+                CONF_VOICE_AGENT_ID: options.get(
+                    CONF_VOICE_AGENT_ID,
+                    DEFAULT_VOICE_AGENT_ID,
+                ),
+                CONF_ASSIST_SESSION_ID: options.get(
+                    CONF_ASSIST_SESSION_ID,
+                    DEFAULT_ASSIST_SESSION_ID,
+                ),
                 CONF_WAKE_WORD_ENABLED: options.get(
                     CONF_WAKE_WORD_ENABLED,
                     DEFAULT_WAKE_WORD_ENABLED,

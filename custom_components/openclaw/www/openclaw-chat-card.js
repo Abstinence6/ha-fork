@@ -74,6 +74,9 @@ class OpenClawChatCard extends HTMLElement {
     this._integrationBrowserVoiceLanguage = null;
     this._integrationVoiceLanguage = null;
     this._integrationTtsLanguage = null;
+    this._integrationAgentId = null;
+    this._integrationVoiceAgentId = null;
+    this._integrationAssistSessionId = null;
     this._allowBraveWebSpeechIntegration = false;
     this._voiceProviderIntegration = "browser";
     this._preferredAssistSttEngine = null;
@@ -312,7 +315,14 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getSessionId() {
-    return this._config.session_id || "default";
+    return this._config.session_id || this._integrationAssistSessionId || "default";
+  }
+
+  _getAgentId(source = null) {
+    if (source === "voice" && this._integrationVoiceAgentId) {
+      return this._integrationVoiceAgentId;
+    }
+    return this._integrationAgentId || null;
   }
 
   _persistMessages() {
@@ -401,6 +411,7 @@ class OpenClawChatCard extends HTMLElement {
     if (!this._hass) return;
 
     try {
+      const previousSessionId = this._getSessionId();
       let result;
       if (typeof this._hass.callWS === "function") {
         result = await this._hass.callWS({ type: "openclaw/get_settings" });
@@ -415,6 +426,9 @@ class OpenClawChatCard extends HTMLElement {
       this._allowBraveWebSpeechIntegration = !!result?.allow_brave_webspeech;
       this._voiceProviderIntegration =
         result?.voice_provider === "assist_stt" ? "assist_stt" : "browser";
+      this._integrationAgentId = this._normalizeOptionalText(result?.agent_id);
+      this._integrationVoiceAgentId = this._normalizeOptionalText(result?.voice_agent_id);
+      this._integrationAssistSessionId = this._normalizeOptionalText(result?.assist_session_id);
       this._integrationBrowserVoiceLanguage =
         result?.browser_voice_language && result?.browser_voice_language !== "auto"
           ? this._normalizeSpeechLanguage(result.browser_voice_language)
@@ -465,6 +479,10 @@ class OpenClawChatCard extends HTMLElement {
         } catch (pipelineErr) {
           console.debug("OpenClaw: assist pipeline language detection skipped:", pipelineErr);
         }
+      }
+      if (this._getSessionId() !== previousSessionId) {
+        this._restoreMessages();
+        this._syncHistoryFromBackend(2);
       }
       this._render();
     } catch (err) {
@@ -542,7 +560,8 @@ class OpenClawChatCard extends HTMLElement {
       await this._hass.callService("openclaw", "send_message", {
         message: message,
         source: source || undefined,
-        session_id: this._config.session_id || undefined,
+        session_id: this._getSessionId() || undefined,
+        agent_id: this._getAgentId(source) || undefined,
       });
 
       setTimeout(() => {
