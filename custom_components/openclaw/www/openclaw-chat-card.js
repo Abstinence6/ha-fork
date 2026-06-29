@@ -13,6 +13,15 @@
  * + subscribes to openclaw_message_received events.
  */
 
+import {
+  describeGitHubPreviewTarget,
+  extractGitHubPreviewTarget,
+  fetchGitHubPreviewText,
+  isLikelyUnifiedDiff,
+  renderGitHubPreviewHtml,
+  renderDiffHtml,
+} from "./openclaw-chat-card-utils.js";
+
 const CARD_VERSION = "0.3.18";
 
 // Max time (ms) to show the thinking indicator before falling back to an error (default; overridable via card config `thinking_timeout` in seconds)
@@ -1826,6 +1835,72 @@ class OpenClawChatCard extends HTMLElement {
     }
   }
 
+  _getGitHubPreviewTarget(messageText) {
+    return extractGitHubPreviewTarget(messageText);
+  }
+
+  async _hydrateGitHubPreview(msg) {
+    if (!msg || typeof msg.content !== "string") return;
+    if (msg._githubPreviewRequested) return;
+
+    const target = this._getGitHubPreviewTarget(msg.content);
+    if (!target) return;
+
+    msg._githubPreviewRequested = true;
+    msg._githubPreview = {
+      state: "loading",
+      target,
+    };
+    this._render();
+
+    await (async () => {
+      try {
+        const previewText = await fetchGitHubPreviewText(target);
+        msg._githubPreview = {
+          state: "ready",
+          target,
+          content: previewText,
+          html: renderGitHubPreviewHtml(target, previewText),
+        };
+      } catch (err) {
+        msg._githubPreview = {
+          state: "error",
+          target,
+          error: err?.message || "github_preview_failed",
+        };
+      } finally {
+        this._render();
+      }
+    })();
+  }
+
+  _renderGitHubPreviewDetails(preview, bodyHtml, bodyClass = "") {
+    const title = this._escapeHtml(describeGitHubPreviewTarget(preview.target));
+    const linkHtml = preview.target?.url
+      ? `<div class="github-preview-links"><a class="github-preview-link" href="${this._escapeHtml(preview.target.url)}" target="_blank" rel="noopener">Open on GitHub</a></div>`
+      : "";
+    const bodyClasses = ["github-preview-body"];
+    if (bodyClass) {
+      bodyClasses.push(bodyClass);
+    }
+    const detailClasses = ["github-preview"];
+    if (bodyClass) {
+      detailClasses.push(bodyClass);
+    }
+
+    return `
+      <details class="${detailClasses.join(" ")}">
+        <summary class="github-preview-head">
+          <span class="github-preview-title">${title}</span>
+          <span class="github-preview-hint">Click to expand</span>
+        </summary>
+        <div class="${bodyClasses.join(" ")}">
+          ${linkHtml}
+          ${bodyHtml}
+        </div>
+      </details>`;
+  }
+
   // ── Render ──────────────────────────────────────────────────────────
 
   _render() {
@@ -1842,6 +1917,7 @@ class OpenClawChatCard extends HTMLElement {
         const isUser = msg.role === "user";
         const isThinking = msg._thinking;
         const isError = msg._error;
+        const preview = msg._githubPreview;
 
         let contentHtml;
         if (isThinking) {
@@ -1850,8 +1926,32 @@ class OpenClawChatCard extends HTMLElement {
           contentHtml = `<div class="error">${this._escapeHtml(msg.content)}</div>`;
         } else if (isUser) {
           contentHtml = this._escapeHtml(msg.content);
+        } else if (isLikelyUnifiedDiff(msg.content)) {
+          contentHtml = renderDiffHtml(msg.content);
         } else {
           contentHtml = renderMarkdown(msg.content);
+        }
+
+        if (!isThinking && !isError && !isLikelyUnifiedDiff(msg.content)) {
+          this._hydrateGitHubPreview(msg).catch((err) => {
+            console.debug("OpenClaw: GitHub preview failed:", err);
+          });
+        }
+
+        if (preview?.state === "loading") {
+          contentHtml += this._renderGitHubPreviewDetails(
+            preview,
+            "Loading preview from GitHub...",
+            "github-preview-loading"
+          );
+        } else if (preview?.state === "error") {
+          contentHtml += this._renderGitHubPreviewDetails(
+            preview,
+            `Unable to load preview: ${this._escapeHtml(preview.error)}`,
+            "github-preview-error"
+          );
+        } else if (preview?.state === "ready" && preview.html) {
+          contentHtml += this._renderGitHubPreviewDetails(preview, preview.html, "github-preview-ready");
         }
 
         const timeHtml =
@@ -1988,6 +2088,137 @@ class OpenClawChatCard extends HTMLElement {
         .bubble pre code {
           background: none;
           padding: 0;
+        }
+        .bubble .diff-block,
+        .bubble .diff-lines {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          font-family: var(--code-font-family, SFMono-Regular, Consolas, "Liberation Mono", monospace);
+          font-size: 12px;
+          line-height: 1.45;
+          white-space: pre;
+          overflow-x: auto;
+          margin: 0;
+        }
+        .bubble .diff-preamble {
+          margin-bottom: 6px;
+        }
+        .bubble details.diff-file-group {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid var(--oc-border);
+        }
+        .bubble details.diff-file-group > summary,
+        .bubble details.github-preview > summary {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          cursor: pointer;
+          list-style: none;
+        }
+        .bubble details.diff-file-group > summary::-webkit-details-marker,
+        .bubble details.github-preview > summary::-webkit-details-marker {
+          display: none;
+        }
+        .bubble .diff-file-title {
+          color: var(--oc-text-secondary);
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .bubble .diff-file-hint,
+        .bubble .github-preview-hint {
+          color: var(--oc-text-secondary);
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          white-space: nowrap;
+        }
+        .bubble .diff-file-body {
+          margin-top: 6px;
+        }
+        .bubble .diff-line {
+          padding: 0 8px;
+          border-left: 3px solid transparent;
+        }
+        .bubble .diff-meta {
+          color: #9ca3af;
+        }
+        .bubble .diff-file {
+          color: #60a5fa;
+        }
+        .bubble .diff-hunk {
+          color: #f59e0b;
+        }
+        .bubble .diff-add {
+          background: rgba(34, 197, 94, 0.14);
+          border-left-color: #22c55e;
+          color: #bbf7d0;
+        }
+        .bubble .diff-remove {
+          background: rgba(239, 68, 68, 0.14);
+          border-left-color: #ef4444;
+          color: #fecaca;
+        }
+        .bubble .code-excerpt {
+          display: flex;
+          flex-direction: column;
+          font-family: var(--code-font-family, SFMono-Regular, Consolas, "Liberation Mono", monospace);
+          font-size: 12px;
+          line-height: 1.45;
+          overflow-x: auto;
+          margin: 0;
+        }
+        .bubble .code-line {
+          display: grid;
+          grid-template-columns: 4.5ch 1fr;
+          gap: 12px;
+          padding: 0 8px;
+        }
+        .bubble .code-line-no {
+          color: var(--oc-text-secondary);
+          text-align: right;
+          user-select: none;
+        }
+        .bubble .code-line-text {
+          white-space: pre;
+        }
+        .bubble .code-line-highlight {
+          background: rgba(96, 165, 250, 0.12);
+          border-left: 3px solid #60a5fa;
+        }
+        .bubble details.github-preview {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid var(--oc-border);
+        }
+        .bubble .github-preview-title {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--oc-text-secondary);
+        }
+        .bubble .github-preview-links {
+          margin-bottom: 8px;
+        }
+        .bubble .github-preview-link {
+          font-size: 11px;
+          color: #60a5fa;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        .bubble .github-preview-link:hover {
+          text-decoration: underline;
+        }
+        .bubble .github-preview-body {
+          font-size: 12px;
+          color: var(--oc-text-secondary);
+        }
+        .bubble .github-preview-ready .github-preview-body,
+        .bubble .github-preview-error .github-preview-body,
+        .bubble .github-preview-loading .github-preview-body {
+          margin-top: 8px;
         }
         .bubble a { color: #60a5fa; }
         .time {

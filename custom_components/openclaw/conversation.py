@@ -30,7 +30,6 @@ from .const import (
     CONF_INCLUDE_EXPOSED_CONTEXT,
     CONF_VOICE_AGENT_ID,
     DEFAULT_ASSIST_SESSION_ID,
-    DEFAULT_AGENT_ID,
     DEFAULT_CONTEXT_MAX_CHARS,
     DEFAULT_CONTEXT_STRATEGY,
     DEFAULT_INCLUDE_EXPOSED_CONTEXT,
@@ -164,14 +163,13 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         assistant_id = "conversation"
         options = self.entry.options
         voice_agent_id = _normalize_agent_id(
-            options.get(CONF_VOICE_AGENT_ID),
+            options.get(CONF_VOICE_AGENT_ID, self.entry.data.get(CONF_VOICE_AGENT_ID)),
         )
         configured_agent_id = _normalize_agent_id(
             options.get(
                 CONF_AGENT_ID,
-                self.entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
+                self.entry.data.get(CONF_AGENT_ID),
             ),
-            DEFAULT_AGENT_ID,
         )
         resolved_agent_id = voice_agent_id or configured_agent_id
         conversation_id = self._resolve_conversation_id(user_input, resolved_agent_id)

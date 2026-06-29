@@ -13,7 +13,6 @@ from .const import (
     API_CHAT_COMPLETIONS,
     API_MODELS,
     API_TOOLS_INVOKE,
-    DEFAULT_AGENT_ID,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,7 +51,7 @@ class OpenClawApiClient:
         use_ssl: bool = False,
         verify_ssl: bool = True,
         session: aiohttp.ClientSession | None = None,
-        agent_id: str = "smart-home",
+        agent_id: str | None = None,
     ) -> None:
         """Initialize the API client.
 
@@ -63,7 +62,7 @@ class OpenClawApiClient:
             use_ssl: Use HTTPS instead of HTTP.
             verify_ssl: Verify SSL certificates (set False for self-signed certs).
             session: Optional aiohttp session (reused from HA).
-            agent_id: Target OpenClaw agent ID (default: "smart-home").
+            agent_id: Target OpenClaw agent ID, if configured.
         """
         self._host = host
         self._port = port
@@ -92,12 +91,13 @@ class OpenClawApiClient:
         extra_headers: dict[str, str] | None = None,
     ) -> dict[str, str]:
         """Build request headers with auth token and agent ID."""
-        effective_agent = agent_id or self._agent_id or "smart-home"
+        effective_agent = agent_id or self._agent_id
         headers = {
             "Authorization": f"Bearer {self._token}",
             "Content-Type": "application/json",
-            "x-openclaw-agent-id": effective_agent,
         }
+        if effective_agent:
+            headers["x-openclaw-agent-id"] = effective_agent
         if extra_headers:
             headers.update(extra_headers)
         return headers
@@ -106,8 +106,7 @@ class OpenClawApiClient:
         """Build the full OpenClaw session key used for agent routing.
 
         The gateway routes `/v1/chat/completions` by the full session key.
-        A bare `session_id` is interpreted under the default `main` agent,
-        even when model/header agent hints are present.
+        If no agent is configured, the raw session id is preserved.
         """
         if not session_id:
             return None
@@ -118,7 +117,9 @@ class OpenClawApiClient:
         if cleaned.startswith("agent:"):
             return cleaned
 
-        effective_agent = agent_id or self._agent_id or "smart-home"
+        effective_agent = agent_id or self._agent_id
+        if not effective_agent:
+            return cleaned
         return f"agent:{effective_agent}:{cleaned}"
 
     async def _get_session(self) -> aiohttp.ClientSession:

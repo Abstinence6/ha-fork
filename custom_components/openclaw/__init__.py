@@ -67,9 +67,7 @@ from .const import (
     CONF_VOICE_PROVIDER,
     CONF_THINKING_TIMEOUT,
     CONTEXT_STRATEGY_TRUNCATE,
-    DEFAULT_AGENT_ID,
     DEFAULT_ASSIST_SESSION_ID,
-    DEFAULT_VOICE_AGENT_ID,
     DEFAULT_CONTEXT_MAX_CHARS,
     DEFAULT_CONTEXT_STRATEGY,
     DEFAULT_ENABLE_TOOL_CALLS,
@@ -117,8 +115,8 @@ _LEGACY_ACTIVE_MODELS = {"openclaw", "main", "ha-smart-home"}
 OpenClawConfigEntry = ConfigEntry
 
 
-def _normalize_agent_id(value: Any, fallback: str) -> str:
-    """Normalize agent ids and remap legacy defaults to the new smart-home agent."""
+def _normalize_agent_id(value: Any, fallback: str | None = None) -> str | None:
+    """Normalize agent ids and keep configured values only."""
     if not isinstance(value, str):
         return fallback
 
@@ -165,7 +163,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     resolved_agent_id = _normalize_agent_id(
         new_options.get(CONF_AGENT_ID, new_data.get(CONF_AGENT_ID)),
-        DEFAULT_AGENT_ID,
     )
     if new_data.get(CONF_AGENT_ID) != resolved_agent_id:
         new_data[CONF_AGENT_ID] = resolved_agent_id
@@ -243,13 +240,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: OpenClawConfigEntry) -> 
     use_ssl = entry.data.get(CONF_USE_SSL, False)
     verify_ssl = entry.data.get(CONF_VERIFY_SSL, True)
     session = async_get_clientsession(hass, verify_ssl=verify_ssl)
-    agent_id: str = _normalize_agent_id(
-        entry.options.get(
-            CONF_AGENT_ID,
-            entry.data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
-        ),
-        DEFAULT_AGENT_ID,
-    )
+    agent_id = _normalize_agent_id(entry.options.get(CONF_AGENT_ID, entry.data.get(CONF_AGENT_ID)))
 
     client = OpenClawApiClient(
         host=entry.data[CONF_GATEWAY_HOST],
@@ -507,10 +498,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         message: str = call.data[ATTR_MESSAGE]
         source: str | None = call.data.get(ATTR_SOURCE)
         session_id: str = call.data.get(ATTR_SESSION_ID) or "default"
-        call_agent_id = _normalize_agent_id(
-            call.data.get(ATTR_AGENT_ID),
-            DEFAULT_AGENT_ID,
-        )
+        call_agent_id = _normalize_agent_id(call.data.get(ATTR_AGENT_ID))
         extra_headers = _VOICE_REQUEST_HEADERS if source == "voice" else None
 
         entry_data = _get_first_entry_data(hass)
@@ -521,22 +509,16 @@ def _async_register_services(hass: HomeAssistant) -> None:
         client: OpenClawApiClient = entry_data["client"]
         coordinator: OpenClawCoordinator = entry_data["coordinator"]
         options = _get_entry_options(hass, entry_data)
-        voice_agent_id = _normalize_agent_id(
-            options.get(CONF_VOICE_AGENT_ID, DEFAULT_VOICE_AGENT_ID),
-            DEFAULT_AGENT_ID,
-        )
         configured_agent_id = _normalize_agent_id(
-            options.get(
-                CONF_AGENT_ID,
-                entry_data["entry"].data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID),
-            ),
-            DEFAULT_AGENT_ID,
+            options.get(CONF_AGENT_ID, entry_data["entry"].data.get(CONF_AGENT_ID))
+        )
+        voice_agent_id = _normalize_agent_id(
+            options.get(CONF_VOICE_AGENT_ID, entry_data["entry"].data.get(CONF_VOICE_AGENT_ID)),
+            configured_agent_id,
         )
         resolved_agent_id = call_agent_id
         if resolved_agent_id is None:
             resolved_agent_id = voice_agent_id if source == "voice" else configured_agent_id
-        if resolved_agent_id is None:
-            resolved_agent_id = DEFAULT_AGENT_ID
 
         try:
             include_context = options.get(
@@ -929,16 +911,20 @@ def _async_register_websocket_api(hass: HomeAssistant) -> None:
                 CONF_AGENT_ID: _normalize_agent_id(
                     options.get(
                         CONF_AGENT_ID,
-                        DEFAULT_AGENT_ID,
+                        entry_data["entry"].data.get(CONF_AGENT_ID),
                     ),
-                    DEFAULT_AGENT_ID,
                 ),
                 CONF_VOICE_AGENT_ID: _normalize_agent_id(
                     options.get(
                         CONF_VOICE_AGENT_ID,
-                        DEFAULT_VOICE_AGENT_ID,
+                        entry_data["entry"].data.get(CONF_VOICE_AGENT_ID),
                     ),
-                    DEFAULT_AGENT_ID,
+                    _normalize_agent_id(
+                        options.get(
+                            CONF_AGENT_ID,
+                            entry_data["entry"].data.get(CONF_AGENT_ID),
+                        )
+                    ),
                 ),
                 "active_model": _normalize_active_model(options.get("active_model")),
                 CONF_ASSIST_SESSION_ID: options.get(

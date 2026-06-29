@@ -57,7 +57,6 @@ from .const import (
     BROWSER_VOICE_LANGUAGES,
     CONTEXT_STRATEGY_CLEAR,
     CONTEXT_STRATEGY_TRUNCATE,
-    DEFAULT_AGENT_ID,
     DEFAULT_ASSIST_SESSION_ID,
     DEFAULT_GATEWAY_HOST,
     DEFAULT_GATEWAY_PORT,
@@ -71,7 +70,7 @@ from .const import (
     DEFAULT_BROWSER_VOICE_LANGUAGE,
     DEFAULT_VOICE_PROVIDER,
     DEFAULT_THINKING_TIMEOUT,
-    DEFAULT_VOICE_AGENT_ID,
+    DEFAULT_AGENT_ID,
     DOMAIN,
     OPENCLAW_CONFIG_REL_PATH,
 )
@@ -474,7 +473,7 @@ class OpenClawOptionsFlow(OptionsFlowWithReload):
                 CONF_VOICE_AGENT_ID,
                 default=options.get(
                     CONF_VOICE_AGENT_ID,
-                    DEFAULT_VOICE_AGENT_ID,
+                    self._config_entry.data.get(CONF_VOICE_AGENT_ID, ""),
                 ),
             ): str,
             vol.Optional(
