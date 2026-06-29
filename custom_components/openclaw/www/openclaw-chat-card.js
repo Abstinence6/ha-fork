@@ -80,14 +80,8 @@ class OpenClawChatCard extends HTMLElement {
     this._lastRecognitionError = null;
     this._pendingResponses = 0;
     this._speechLangOverride = null;
-    this._integrationBrowserVoiceLanguage = null;
-    this._integrationVoiceLanguage = null;
     this._integrationTtsLanguage = null;
     this._integrationAgentId = null;
-    this._integrationVoiceAgentId = null;
-    this._integrationAssistSessionId = null;
-    this._allowBraveWebSpeechIntegration = false;
-    this._voiceProviderIntegration = "browser";
     this._preferredAssistSttEngine = null;
     this._preferredAssistTtsEngine = null;
     this._assistTtsEngines = [];
@@ -323,13 +317,10 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getSessionId() {
-    return this._config.session_id || this._integrationAssistSessionId || "";
+    return this._config.session_id || "";
   }
 
-  _getAgentId(source = null) {
-    if (source === "voice" && this._integrationVoiceAgentId) {
-      return this._integrationVoiceAgentId;
-    }
+  _getAgentId() {
     return this._integrationAgentId || null;
   }
 
@@ -431,19 +422,7 @@ class OpenClawChatCard extends HTMLElement {
 
       this._wakeWordEnabled = this._coerceBoolean(result?.wake_word_enabled, false);
       this._wakeWord = (result?.wake_word || "hey openclaw").toString().trim().toLowerCase();
-      this._allowBraveWebSpeechIntegration = !!result?.allow_brave_webspeech;
-      this._voiceProviderIntegration =
-        result?.voice_provider === "assist_stt" ? "assist_stt" : "browser";
       this._integrationAgentId = this._normalizeOptionalText(result?.agent_id);
-      this._integrationVoiceAgentId = this._normalizeOptionalText(result?.voice_agent_id);
-      this._integrationAssistSessionId = this._normalizeOptionalText(result?.assist_session_id);
-      this._integrationBrowserVoiceLanguage =
-        result?.browser_voice_language && result?.browser_voice_language !== "auto"
-          ? this._normalizeSpeechLanguage(result.browser_voice_language)
-          : null;
-      this._integrationVoiceLanguage = result?.language
-        ? this._normalizeSpeechLanguage(result.language)
-        : null;
       this._integrationThinkingTimeout =
         typeof result?.thinking_timeout === "number" && result.thinking_timeout >= 10
           ? result.thinking_timeout * 1000
@@ -478,9 +457,6 @@ class OpenClawChatCard extends HTMLElement {
         const ttsLanguage =
           preferredPipeline?.tts_language || preferredPipeline?.language || preferredPipeline?.stt_language;
 
-        if (sttLanguage) {
-          this._integrationVoiceLanguage = this._normalizeSpeechLanguage(sttLanguage);
-        }
         if (ttsLanguage) {
           this._integrationTtsLanguage = this._normalizeSpeechLanguage(ttsLanguage);
         }
@@ -661,15 +637,10 @@ class OpenClawChatCard extends HTMLElement {
     if (configuredLang) {
       return this._normalizeSpeechLanguage(configuredLang);
     }
-    const provider = this._getVoiceProvider();
-    if (provider === "browser" && this._integrationBrowserVoiceLanguage) {
-      return this._normalizeSpeechLanguage(this._integrationBrowserVoiceLanguage);
-    }
-    const integrationLang = this._integrationVoiceLanguage;
     const hassLang =
       this._hass?.locale?.language || this._hass?.selectedLanguage || this._hass?.language;
     const browserLang = navigator.language;
-    const preferred = configuredLang || integrationLang || hassLang || browserLang || "en-US";
+    const preferred = configuredLang || hassLang || browserLang || "en-US";
     return this._normalizeSpeechLanguage(preferred);
   }
 
@@ -678,14 +649,9 @@ class OpenClawChatCard extends HTMLElement {
     if (configuredLang) {
       return this._normalizeSpeechLanguage(configuredLang);
     }
-    const provider = this._getVoiceProvider();
-    if (provider === "browser" && this._integrationBrowserVoiceLanguage) {
-      return this._normalizeSpeechLanguage(this._integrationBrowserVoiceLanguage);
-    }
     const preferred =
       configuredLang ||
       this._integrationTtsLanguage ||
-      this._integrationVoiceLanguage ||
       this._hass?.locale?.language ||
       this._hass?.selectedLanguage ||
       this._hass?.language ||
@@ -711,7 +677,7 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getVoiceProvider() {
-    return this._voiceProviderIntegration || "browser";
+    return this._config.voice_provider || "browser";
   }
 
   async _startVoiceRecognition() {
@@ -1127,8 +1093,7 @@ class OpenClawChatCard extends HTMLElement {
       clearTimeout(this._voiceIdleRestartTimer);
       this._voiceIdleRestartTimer = null;
     }
-    const allowBraveWebSpeech =
-      this._config.allow_brave_webspeech || this._allowBraveWebSpeechIntegration;
+    const allowBraveWebSpeech = this._config.allow_brave_webspeech;
 
     if (this._isLikelyBraveBrowser() && !allowBraveWebSpeech) {
       this._voiceStatus =

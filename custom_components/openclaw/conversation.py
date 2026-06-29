@@ -23,13 +23,10 @@ from .const import (
     ATTR_MODEL,
     ATTR_SESSION_ID,
     ATTR_TIMESTAMP,
-    CONF_ASSIST_SESSION_ID,
     CONF_AGENT_ID,
     CONF_CONTEXT_MAX_CHARS,
     CONF_CONTEXT_STRATEGY,
     CONF_INCLUDE_EXPOSED_CONTEXT,
-    CONF_VOICE_AGENT_ID,
-    DEFAULT_ASSIST_SESSION_ID,
     DEFAULT_CONTEXT_MAX_CHARS,
     DEFAULT_CONTEXT_STRATEGY,
     DEFAULT_INCLUDE_EXPOSED_CONTEXT,
@@ -162,16 +159,13 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         message = user_input.text
         assistant_id = "conversation"
         options = self.entry.options
-        voice_agent_id = _normalize_agent_id(
-            options.get(CONF_VOICE_AGENT_ID, self.entry.data.get(CONF_VOICE_AGENT_ID)),
-        )
         configured_agent_id = _normalize_agent_id(
             options.get(
                 CONF_AGENT_ID,
                 self.entry.data.get(CONF_AGENT_ID),
             ),
         )
-        resolved_agent_id = voice_agent_id or configured_agent_id
+        resolved_agent_id = configured_agent_id
         conversation_id = self._resolve_conversation_id(user_input, resolved_agent_id)
         active_model = _normalize_active_model(options.get("active_model"))
         include_context = options.get(
@@ -264,15 +258,6 @@ class OpenClawConversationAgent(conversation.AbstractConversationAgent):
         agent_id: str | None,
     ) -> str:
         """Return conversation id from HA with conservative agent namespacing."""
-        configured_session_id = self._normalize_optional_text(
-            self.entry.options.get(
-                CONF_ASSIST_SESSION_ID,
-                DEFAULT_ASSIST_SESSION_ID,
-            )
-        )
-        if configured_session_id:
-            return configured_session_id
-
         agent_suffix = _normalize_agent_id(agent_id)
 
         if user_input.conversation_id:

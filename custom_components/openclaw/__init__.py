@@ -49,8 +49,6 @@ from .const import (
     ATTR_TIMESTAMP,
     CONF_ADDON_CONFIG_PATH,
     CONF_AGENT_ID,
-    CONF_ASSIST_SESSION_ID,
-    CONF_VOICE_AGENT_ID,
     CONF_GATEWAY_HOST,
     CONF_GATEWAY_PORT,
     CONF_GATEWAY_TOKEN,
@@ -60,23 +58,12 @@ from .const import (
     CONF_CONTEXT_STRATEGY,
     CONF_ENABLE_TOOL_CALLS,
     CONF_INCLUDE_EXPOSED_CONTEXT,
-    CONF_WAKE_WORD,
-    CONF_WAKE_WORD_ENABLED,
-    CONF_ALLOW_BRAVE_WEBSPEECH,
-    CONF_BROWSER_VOICE_LANGUAGE,
-    CONF_VOICE_PROVIDER,
     CONF_THINKING_TIMEOUT,
     CONTEXT_STRATEGY_TRUNCATE,
-    DEFAULT_ASSIST_SESSION_ID,
     DEFAULT_CONTEXT_MAX_CHARS,
     DEFAULT_CONTEXT_STRATEGY,
     DEFAULT_ENABLE_TOOL_CALLS,
     DEFAULT_INCLUDE_EXPOSED_CONTEXT,
-    DEFAULT_WAKE_WORD,
-    DEFAULT_WAKE_WORD_ENABLED,
-    DEFAULT_ALLOW_BRAVE_WEBSPEECH,
-    DEFAULT_BROWSER_VOICE_LANGUAGE,
-    DEFAULT_VOICE_PROVIDER,
     DEFAULT_THINKING_TIMEOUT,
     DOMAIN,
     EVENT_MESSAGE_RECEIVED,
@@ -166,14 +153,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         new_options[CONF_AGENT_ID] = resolved_agent_id
         updated = True
 
-    resolved_voice_agent_id = _normalize_agent_id(
-        new_options.get(CONF_VOICE_AGENT_ID),
-        resolved_agent_id,
-    )
-    if new_options.get(CONF_VOICE_AGENT_ID) != resolved_voice_agent_id:
-        new_options[CONF_VOICE_AGENT_ID] = resolved_voice_agent_id
-        updated = True
-
     active_model = _normalize_active_model(new_options.get("active_model"))
     if new_options.get("active_model") != active_model:
         if active_model is None:
@@ -189,9 +168,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             options=new_options,
         )
         _LOGGER.info(
-            "Migrated OpenClaw config entry to agent_id=%s voice_agent_id=%s",
+            "Migrated OpenClaw config entry to agent_id=%s",
             resolved_agent_id,
-            resolved_voice_agent_id,
         )
 
     return True
@@ -506,13 +484,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
         configured_agent_id = _normalize_agent_id(
             options.get(CONF_AGENT_ID, entry_data["entry"].data.get(CONF_AGENT_ID))
         )
-        voice_agent_id = _normalize_agent_id(
-            options.get(CONF_VOICE_AGENT_ID, entry_data["entry"].data.get(CONF_VOICE_AGENT_ID)),
-            configured_agent_id,
-        )
         resolved_agent_id = call_agent_id
         if resolved_agent_id is None:
-            resolved_agent_id = voice_agent_id if source == "voice" else configured_agent_id
+            resolved_agent_id = configured_agent_id
 
         try:
             include_context = options.get(
@@ -908,40 +882,7 @@ def _async_register_websocket_api(hass: HomeAssistant) -> None:
                         entry_data["entry"].data.get(CONF_AGENT_ID),
                     ),
                 ),
-                CONF_VOICE_AGENT_ID: _normalize_agent_id(
-                    options.get(
-                        CONF_VOICE_AGENT_ID,
-                        entry_data["entry"].data.get(CONF_VOICE_AGENT_ID),
-                    ),
-                    _normalize_agent_id(
-                        options.get(
-                            CONF_AGENT_ID,
-                            entry_data["entry"].data.get(CONF_AGENT_ID),
-                        )
-                    ),
-                ),
                 "active_model": _normalize_active_model(options.get("active_model")),
-                CONF_ASSIST_SESSION_ID: options.get(
-                    CONF_ASSIST_SESSION_ID,
-                    DEFAULT_ASSIST_SESSION_ID,
-                ),
-                CONF_WAKE_WORD_ENABLED: options.get(
-                    CONF_WAKE_WORD_ENABLED,
-                    DEFAULT_WAKE_WORD_ENABLED,
-                ),
-                CONF_WAKE_WORD: options.get(CONF_WAKE_WORD, DEFAULT_WAKE_WORD),
-                CONF_ALLOW_BRAVE_WEBSPEECH: options.get(
-                    CONF_ALLOW_BRAVE_WEBSPEECH,
-                    DEFAULT_ALLOW_BRAVE_WEBSPEECH,
-                ),
-                CONF_VOICE_PROVIDER: options.get(
-                    CONF_VOICE_PROVIDER,
-                    DEFAULT_VOICE_PROVIDER,
-                ),
-                CONF_BROWSER_VOICE_LANGUAGE: options.get(
-                    CONF_BROWSER_VOICE_LANGUAGE,
-                    DEFAULT_BROWSER_VOICE_LANGUAGE,
-                ),
                 CONF_THINKING_TIMEOUT: options.get(
                     CONF_THINKING_TIMEOUT,
                     DEFAULT_THINKING_TIMEOUT,

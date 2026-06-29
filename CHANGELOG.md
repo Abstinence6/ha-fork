@@ -2,44 +2,6 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
-## [0.1.71] - 2026-06-29
-
-### Fixed
-- Fall back to non-streaming Assist responses when the gateway closes an SSE stream early, preventing raw `ClientPayloadError` failures in HA Assist while preserving the configured smart-home session route.
-
-## [0.1.70] - 2026-06-29
-
-### Fixed
-- Send a full OpenClaw `x-openclaw-session-key` (`agent:<agent_id>:<session_id>`) for chat-card, service, and Assist requests so the gateway creates sessions under the configured agent instead of falling back to `agent:main:<session_id>`.
-
-## [0.1.69] - 2026-06-29
-
-### Fixed
-- Fixed the `openclaw/get_settings` websocket endpoint after the smart-home routing migration so the Lovelace card can receive normalized `agent_id`, `voice_agent_id`, and session settings again.
-- Treat the bare `openclaw` model as a legacy/base model override and ignore it for routing, allowing the configured `smart-home` agent to drive chat-card and Assist requests.
-- Aligned the backend Lovelace resource cache-bust URL with the current integration version.
-
-## [0.1.68] - 2026-06-29
-
-### Fixed
-- Normalized `agent_id`, `voice_agent_id`, and legacy `active_model` values at runtime so old routing defaults can no longer override the configured agent in either Assist or the chat card.
-
-## [0.1.67] - 2026-06-29
-
-### Fixed
-- Ignore legacy `active_model` overrides so the integration falls back to the configured agent instead of being pinned to an old default model.
-
-## [0.1.66] - 2026-06-29
-
-### Fixed
-- Bumped config entry migration again so Home Assistant instances already on integration version 2 still migrate legacy agent IDs to the configured default.
-
-## [0.1.65] - 2026-06-29
-
-### Fixed
-- Migrated existing OpenClaw config entries away from legacy agent IDs so both Assist and the chat card resolve from the current configuration after upgrade.
-- Updated the chat-card resource cache-bust version so browsers pick up the new settings and routing behavior immediately after the integration refreshes.
-
 ## [0.1.63] - 2026-05-31
 
 ### Fixed
