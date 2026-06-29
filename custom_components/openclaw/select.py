@@ -79,13 +79,24 @@ class OpenClawModelSelect(CoordinatorEntity[OpenClawCoordinator], SelectEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Update options and current selection when coordinator refreshes."""
+        """Update options and current selection when coordinator refreshes.
+
+        Prefer the user-stored option from config entry options over the
+        coordinator's first-model-from-/v1/models so that manual selection
+        is not silently reset on every poll cycle.
+        """
         models = self.coordinator.available_models
         if models:
             self._attr_options = models
-        current = (self.coordinator.data or {}).get(DATA_MODEL)
-        if current and current in self._attr_options:
-            self._attr_current_option = current
+
+        stored_option = self._entry.options.get("active_model")
+        if stored_option and stored_option in self._attr_options:
+            if self._attr_current_option != stored_option:
+                self._attr_current_option = stored_option
+        else:
+            current = (self.coordinator.data or {}).get(DATA_MODEL)
+            if current and current in self._attr_options:
+                self._attr_current_option = current
         self.async_write_ha_state()
 
     async def async_select_option(self, option: str) -> None:
