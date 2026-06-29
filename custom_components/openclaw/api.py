@@ -101,6 +101,25 @@ class OpenClawApiClient:
             headers.update(extra_headers)
         return headers
 
+    def _session_key(self, session_id: str | None, agent_id: str | None = None) -> str | None:
+        """Build the full OpenClaw session key used for agent routing.
+
+        The gateway routes `/v1/chat/completions` by the full session key.
+        A bare `session_id` is interpreted under the default `main` agent,
+        even when model/header agent hints are present.
+        """
+        if not session_id:
+            return None
+
+        cleaned = session_id.strip()
+        if not cleaned:
+            return None
+        if cleaned.startswith("agent:"):
+            return cleaned
+
+        effective_agent = agent_id or self._agent_id or "smart-home"
+        return f"agent:{effective_agent}:{cleaned}"
+
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create an aiohttp session."""
         if self._session is None or self._session.closed:
@@ -239,7 +258,9 @@ class OpenClawApiClient:
         headers = self._headers(agent_id=agent_id, extra_headers=extra_headers)
         if session_id:
             headers["X-Session-Id"] = session_id
-            headers["x-openclaw-session-key"] = session_id
+            session_key = self._session_key(session_id, agent_id)
+            if session_key:
+                headers["x-openclaw-session-key"] = session_key
 
         session = await self._get_session()
         url = f"{self._base_url}{API_CHAT_COMPLETIONS}"
@@ -307,7 +328,9 @@ class OpenClawApiClient:
         headers = self._headers(agent_id=agent_id, extra_headers=extra_headers)
         if session_id:
             headers["X-Session-Id"] = session_id
-            headers["x-openclaw-session-key"] = session_id
+            session_key = self._session_key(session_id, agent_id)
+            if session_key:
+                headers["x-openclaw-session-key"] = session_key
 
         session = await self._get_session()
         url = f"{self._base_url}{API_CHAT_COMPLETIONS}"

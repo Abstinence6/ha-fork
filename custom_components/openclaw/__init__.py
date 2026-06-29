@@ -109,7 +109,7 @@ _CARD_PATH = Path(__file__).parent / "www" / _CARD_FILENAME
 # URL at which the card JS is served (registered via register_static_path)
 _CARD_STATIC_URL = f"/openclaw/{_CARD_FILENAME}"
 # Versioned URL used for Lovelace resource registration to avoid stale browser cache
-_CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.69"
+_CARD_URL = f"{_CARD_STATIC_URL}?v=0.1.70"
 
 _LEGACY_AGENT_IDS = {"main", "ha-smart-home"}
 _LEGACY_ACTIVE_MODELS = {"openclaw", "main", "ha-smart-home"}

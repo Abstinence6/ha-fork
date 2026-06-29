@@ -2,6 +2,11 @@
 
 All notable changes to the OpenClaw Home Assistant Integration will be documented in this file.
 
+## [0.1.70] - 2026-06-29
+
+### Fixed
+- Send a full OpenClaw `x-openclaw-session-key` (`agent:<agent_id>:<session_id>`) for chat-card, service, and Assist requests so the gateway creates sessions under the configured agent instead of falling back to `agent:main:<session_id>`.
+
 ## [0.1.69] - 2026-06-29
 
 ### Fixed
