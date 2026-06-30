@@ -76,6 +76,7 @@ class OpenClawChatCard extends HTMLElement {
     this._integrationTtsLanguage = null;
     this._allowBraveWebSpeechIntegration = false;
     this._voiceProviderIntegration = "browser";
+    this._integrationAgentId = null;
     this._preferredAssistSttEngine = null;
     this._preferredAssistTtsEngine = null;
     this._assistTtsEngines = [];
@@ -315,6 +316,10 @@ class OpenClawChatCard extends HTMLElement {
     return this._config.session_id || "default";
   }
 
+  _getAgentId() {
+    return this._integrationAgentId || null;
+  }
+
   _persistMessages() {
     try {
       const toSave = this._messages.filter((m) => !m._thinking);
@@ -421,6 +426,9 @@ class OpenClawChatCard extends HTMLElement {
           : null;
       this._integrationVoiceLanguage = result?.language
         ? this._normalizeSpeechLanguage(result.language)
+        : null;
+      this._integrationAgentId = result?.agent_id && typeof result.agent_id === "string" && result.agent_id.trim().length > 0
+        ? result.agent_id.trim()
         : null;
       this._integrationThinkingTimeout =
         typeof result?.thinking_timeout === "number" && result.thinking_timeout >= 10
@@ -543,6 +551,7 @@ class OpenClawChatCard extends HTMLElement {
         message: message,
         source: source || undefined,
         session_id: this._config.session_id || undefined,
+        agent_id: this._getAgentId() || undefined,
       });
 
       setTimeout(() => {
