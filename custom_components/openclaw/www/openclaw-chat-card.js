@@ -13,16 +13,7 @@
  * + subscribes to openclaw_message_received events.
  */
 
-import {
-  describeGitHubPreviewTarget,
-  extractGitHubPreviewTarget,
-  fetchGitHubPreviewText,
-  isLikelyUnifiedDiff,
-  renderGitHubPreviewHtml,
-  renderDiffHtml,
-} from "./openclaw-chat-card-utils.js";
-
-const CARD_VERSION = "0.3.18";
+const CARD_VERSION = "0.3.13";
 
 // Max time (ms) to show the thinking indicator before falling back to an error (default; overridable via card config `thinking_timeout` in seconds)
 const THINKING_TIMEOUT_MS = 120_000;
@@ -80,8 +71,11 @@ class OpenClawChatCard extends HTMLElement {
     this._lastRecognitionError = null;
     this._pendingResponses = 0;
     this._speechLangOverride = null;
+    this._integrationBrowserVoiceLanguage = null;
+    this._integrationVoiceLanguage = null;
     this._integrationTtsLanguage = null;
-    this._integrationAgentId = null;
+    this._allowBraveWebSpeechIntegration = false;
+    this._voiceProviderIntegration = "browser";
     this._preferredAssistSttEngine = null;
     this._preferredAssistTtsEngine = null;
     this._assistTtsEngines = [];
@@ -122,6 +116,7 @@ class OpenClawChatCard extends HTMLElement {
       show_voice_button: config.show_voice_button !== false,
       show_clear_button: config.show_clear_button !== false,
       allow_brave_webspeech: config.allow_brave_webspeech === true,
+      voice_provider: config.voice_provider || null,
       session_id: config.session_id || null,
       thinking_timeout: config.thinking_timeout ?? 120,
       ...config,
@@ -259,7 +254,7 @@ class OpenClawChatCard extends HTMLElement {
 
     // Check if this event is for our session
     const sessionId = this._getSessionId();
-    if (sessionId && data.session_id && data.session_id !== sessionId) return;
+    if (data.session_id && data.session_id !== sessionId) return;
 
     const signature = `${sessionId}|${data.timestamp || ""}|${String(data.message)}`;
     if (signature === this._lastAssistantEventSignature) {
@@ -317,11 +312,7 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getSessionId() {
-    return this._config.session_id || "";
-  }
-
-  _getAgentId() {
-    return this._integrationAgentId || null;
+    return this._config.session_id || "default";
   }
 
   _persistMessages() {
@@ -357,12 +348,12 @@ class OpenClawChatCard extends HTMLElement {
       if (typeof this._hass.callWS === "function") {
         result = await this._hass.callWS({
           type: "openclaw/get_history",
-          session_id: sessionId || undefined,
+          session_id: sessionId,
         });
       } else {
         result = await this._hass.connection.sendMessagePromise({
           type: "openclaw/get_history",
-          session_id: sessionId || undefined,
+          session_id: sessionId,
         });
       }
 
@@ -410,7 +401,6 @@ class OpenClawChatCard extends HTMLElement {
     if (!this._hass) return;
 
     try {
-      const previousSessionId = this._getSessionId();
       let result;
       if (typeof this._hass.callWS === "function") {
         result = await this._hass.callWS({ type: "openclaw/get_settings" });
@@ -422,7 +412,16 @@ class OpenClawChatCard extends HTMLElement {
 
       this._wakeWordEnabled = this._coerceBoolean(result?.wake_word_enabled, false);
       this._wakeWord = (result?.wake_word || "hey openclaw").toString().trim().toLowerCase();
-      this._integrationAgentId = this._normalizeOptionalText(result?.agent_id);
+      this._allowBraveWebSpeechIntegration = !!result?.allow_brave_webspeech;
+      this._voiceProviderIntegration =
+        result?.voice_provider === "assist_stt" ? "assist_stt" : "browser";
+      this._integrationBrowserVoiceLanguage =
+        result?.browser_voice_language && result?.browser_voice_language !== "auto"
+          ? this._normalizeSpeechLanguage(result.browser_voice_language)
+          : null;
+      this._integrationVoiceLanguage = result?.language
+        ? this._normalizeSpeechLanguage(result.language)
+        : null;
       this._integrationThinkingTimeout =
         typeof result?.thinking_timeout === "number" && result.thinking_timeout >= 10
           ? result.thinking_timeout * 1000
@@ -457,16 +456,15 @@ class OpenClawChatCard extends HTMLElement {
         const ttsLanguage =
           preferredPipeline?.tts_language || preferredPipeline?.language || preferredPipeline?.stt_language;
 
+        if (sttLanguage) {
+          this._integrationVoiceLanguage = this._normalizeSpeechLanguage(sttLanguage);
+        }
         if (ttsLanguage) {
           this._integrationTtsLanguage = this._normalizeSpeechLanguage(ttsLanguage);
         }
         } catch (pipelineErr) {
           console.debug("OpenClaw: assist pipeline language detection skipped:", pipelineErr);
         }
-      }
-      if (this._getSessionId() !== previousSessionId) {
-        this._restoreMessages();
-        this._syncHistoryFromBackend(2);
       }
       this._render();
     } catch (err) {
@@ -544,8 +542,7 @@ class OpenClawChatCard extends HTMLElement {
       await this._hass.callService("openclaw", "send_message", {
         message: message,
         source: source || undefined,
-        session_id: this._getSessionId() || undefined,
-        agent_id: this._getAgentId(source) || undefined,
+        session_id: this._config.session_id || undefined,
       });
 
       setTimeout(() => {
@@ -633,25 +630,35 @@ class OpenClawChatCard extends HTMLElement {
       return this._speechLangOverride;
     }
 
-    const configuredLang = this._config.browser_voice_language || this._config.voice_language;
+    const configuredLang = this._config.voice_language;
     if (configuredLang) {
       return this._normalizeSpeechLanguage(configuredLang);
     }
+    const provider = this._getVoiceProvider();
+    if (provider === "browser" && this._integrationBrowserVoiceLanguage) {
+      return this._normalizeSpeechLanguage(this._integrationBrowserVoiceLanguage);
+    }
+    const integrationLang = this._integrationVoiceLanguage;
     const hassLang =
       this._hass?.locale?.language || this._hass?.selectedLanguage || this._hass?.language;
     const browserLang = navigator.language;
-    const preferred = configuredLang || hassLang || browserLang || "en-US";
+    const preferred = configuredLang || integrationLang || hassLang || browserLang || "en-US";
     return this._normalizeSpeechLanguage(preferred);
   }
 
   _getSpeechSynthesisLanguage() {
-    const configuredLang = this._config.browser_voice_language || this._config.voice_language;
+    const configuredLang = this._config.voice_language;
     if (configuredLang) {
       return this._normalizeSpeechLanguage(configuredLang);
+    }
+    const provider = this._getVoiceProvider();
+    if (provider === "browser" && this._integrationBrowserVoiceLanguage) {
+      return this._normalizeSpeechLanguage(this._integrationBrowserVoiceLanguage);
     }
     const preferred =
       configuredLang ||
       this._integrationTtsLanguage ||
+      this._integrationVoiceLanguage ||
       this._hass?.locale?.language ||
       this._hass?.selectedLanguage ||
       this._hass?.language ||
@@ -677,9 +684,11 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getVoiceProvider() {
-    const value = this._config.voice_provider;
-    if (value === "assist_stt" || value === "browser") return value;
-    return "browser";
+    const configured = this._config.voice_provider;
+    if (configured === "assist_stt" || configured === "browser") {
+      return configured;
+    }
+    return this._voiceProviderIntegration || "browser";
   }
 
   async _startVoiceRecognition() {
@@ -1095,7 +1104,8 @@ class OpenClawChatCard extends HTMLElement {
       clearTimeout(this._voiceIdleRestartTimer);
       this._voiceIdleRestartTimer = null;
     }
-    const allowBraveWebSpeech = this._config.allow_brave_webspeech;
+    const allowBraveWebSpeech =
+      this._config.allow_brave_webspeech || this._allowBraveWebSpeechIntegration;
 
     if (this._isLikelyBraveBrowser() && !allowBraveWebSpeech) {
       this._voiceStatus =
@@ -1802,72 +1812,6 @@ class OpenClawChatCard extends HTMLElement {
     }
   }
 
-  _getGitHubPreviewTarget(messageText) {
-    return extractGitHubPreviewTarget(messageText);
-  }
-
-  async _hydrateGitHubPreview(msg) {
-    if (!msg || typeof msg.content !== "string") return;
-    if (msg._githubPreviewRequested) return;
-
-    const target = this._getGitHubPreviewTarget(msg.content);
-    if (!target) return;
-
-    msg._githubPreviewRequested = true;
-    msg._githubPreview = {
-      state: "loading",
-      target,
-    };
-    this._render();
-
-    await (async () => {
-      try {
-        const previewText = await fetchGitHubPreviewText(target);
-        msg._githubPreview = {
-          state: "ready",
-          target,
-          content: previewText,
-          html: renderGitHubPreviewHtml(target, previewText),
-        };
-      } catch (err) {
-        msg._githubPreview = {
-          state: "error",
-          target,
-          error: err?.message || "github_preview_failed",
-        };
-      } finally {
-        this._render();
-      }
-    })();
-  }
-
-  _renderGitHubPreviewDetails(preview, bodyHtml, bodyClass = "") {
-    const title = this._escapeHtml(describeGitHubPreviewTarget(preview.target));
-    const linkHtml = preview.target?.url
-      ? `<div class="github-preview-links"><a class="github-preview-link" href="${this._escapeHtml(preview.target.url)}" target="_blank" rel="noopener">Open on GitHub</a></div>`
-      : "";
-    const bodyClasses = ["github-preview-body"];
-    if (bodyClass) {
-      bodyClasses.push(bodyClass);
-    }
-    const detailClasses = ["github-preview"];
-    if (bodyClass) {
-      detailClasses.push(bodyClass);
-    }
-
-    return `
-      <details class="${detailClasses.join(" ")}">
-        <summary class="github-preview-head">
-          <span class="github-preview-title">${title}</span>
-          <span class="github-preview-hint">Click to expand</span>
-        </summary>
-        <div class="${bodyClasses.join(" ")}">
-          ${linkHtml}
-          ${bodyHtml}
-        </div>
-      </details>`;
-  }
-
   // ── Render ──────────────────────────────────────────────────────────
 
   _render() {
@@ -1884,7 +1828,6 @@ class OpenClawChatCard extends HTMLElement {
         const isUser = msg.role === "user";
         const isThinking = msg._thinking;
         const isError = msg._error;
-        const preview = msg._githubPreview;
 
         let contentHtml;
         if (isThinking) {
@@ -1893,32 +1836,8 @@ class OpenClawChatCard extends HTMLElement {
           contentHtml = `<div class="error">${this._escapeHtml(msg.content)}</div>`;
         } else if (isUser) {
           contentHtml = this._escapeHtml(msg.content);
-        } else if (isLikelyUnifiedDiff(msg.content)) {
-          contentHtml = renderDiffHtml(msg.content);
         } else {
           contentHtml = renderMarkdown(msg.content);
-        }
-
-        if (!isThinking && !isError && !isLikelyUnifiedDiff(msg.content)) {
-          this._hydrateGitHubPreview(msg).catch((err) => {
-            console.debug("OpenClaw: GitHub preview failed:", err);
-          });
-        }
-
-        if (preview?.state === "loading") {
-          contentHtml += this._renderGitHubPreviewDetails(
-            preview,
-            "Loading preview from GitHub...",
-            "github-preview-loading"
-          );
-        } else if (preview?.state === "error") {
-          contentHtml += this._renderGitHubPreviewDetails(
-            preview,
-            `Unable to load preview: ${this._escapeHtml(preview.error)}`,
-            "github-preview-error"
-          );
-        } else if (preview?.state === "ready" && preview.html) {
-          contentHtml += this._renderGitHubPreviewDetails(preview, preview.html, "github-preview-ready");
         }
 
         const timeHtml =
@@ -2055,137 +1974,6 @@ class OpenClawChatCard extends HTMLElement {
         .bubble pre code {
           background: none;
           padding: 0;
-        }
-        .bubble .diff-block,
-        .bubble .diff-lines {
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-          font-family: var(--code-font-family, SFMono-Regular, Consolas, "Liberation Mono", monospace);
-          font-size: 12px;
-          line-height: 1.45;
-          white-space: pre;
-          overflow-x: auto;
-          margin: 0;
-        }
-        .bubble .diff-preamble {
-          margin-bottom: 6px;
-        }
-        .bubble details.diff-file-group {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px solid var(--oc-border);
-        }
-        .bubble details.diff-file-group > summary,
-        .bubble details.github-preview > summary {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          cursor: pointer;
-          list-style: none;
-        }
-        .bubble details.diff-file-group > summary::-webkit-details-marker,
-        .bubble details.github-preview > summary::-webkit-details-marker {
-          display: none;
-        }
-        .bubble .diff-file-title {
-          color: var(--oc-text-secondary);
-          font-size: 12px;
-          font-weight: 600;
-        }
-        .bubble .diff-file-hint,
-        .bubble .github-preview-hint {
-          color: var(--oc-text-secondary);
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          white-space: nowrap;
-        }
-        .bubble .diff-file-body {
-          margin-top: 6px;
-        }
-        .bubble .diff-line {
-          padding: 0 8px;
-          border-left: 3px solid transparent;
-        }
-        .bubble .diff-meta {
-          color: #9ca3af;
-        }
-        .bubble .diff-file {
-          color: #60a5fa;
-        }
-        .bubble .diff-hunk {
-          color: #f59e0b;
-        }
-        .bubble .diff-add {
-          background: rgba(34, 197, 94, 0.14);
-          border-left-color: #22c55e;
-          color: #bbf7d0;
-        }
-        .bubble .diff-remove {
-          background: rgba(239, 68, 68, 0.14);
-          border-left-color: #ef4444;
-          color: #fecaca;
-        }
-        .bubble .code-excerpt {
-          display: flex;
-          flex-direction: column;
-          font-family: var(--code-font-family, SFMono-Regular, Consolas, "Liberation Mono", monospace);
-          font-size: 12px;
-          line-height: 1.45;
-          overflow-x: auto;
-          margin: 0;
-        }
-        .bubble .code-line {
-          display: grid;
-          grid-template-columns: 4.5ch 1fr;
-          gap: 12px;
-          padding: 0 8px;
-        }
-        .bubble .code-line-no {
-          color: var(--oc-text-secondary);
-          text-align: right;
-          user-select: none;
-        }
-        .bubble .code-line-text {
-          white-space: pre;
-        }
-        .bubble .code-line-highlight {
-          background: rgba(96, 165, 250, 0.12);
-          border-left: 3px solid #60a5fa;
-        }
-        .bubble details.github-preview {
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px solid var(--oc-border);
-        }
-        .bubble .github-preview-title {
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: var(--oc-text-secondary);
-        }
-        .bubble .github-preview-links {
-          margin-bottom: 8px;
-        }
-        .bubble .github-preview-link {
-          font-size: 11px;
-          color: #60a5fa;
-          text-decoration: none;
-          white-space: nowrap;
-        }
-        .bubble .github-preview-link:hover {
-          text-decoration: underline;
-        }
-        .bubble .github-preview-body {
-          font-size: 12px;
-          color: var(--oc-text-secondary);
-        }
-        .bubble .github-preview-ready .github-preview-body,
-        .bubble .github-preview-error .github-preview-body,
-        .bubble .github-preview-loading .github-preview-body {
-          margin-top: 8px;
         }
         .bubble a { color: #60a5fa; }
         .time {
