@@ -1,67 +1,5 @@
 # OpenClaw Integration for Home Assistant
 
-<!-- AI-ASSISTANT-NOTES:START -->
-## Мапа роботи для AI-агентів
-
-Останнє оновлення: 2026-06-28. Цей розділ написаний для агентів кодування, яким потрібно швидко зрозуміти репозиторій.
-
-Імена файлів, API, символів, гілок, команд і форматів залишені без перекладу навмисно.
-
-### Призначення
-
-Custom integration для Home Assistant, що з’єднує HA Assist/Lovelace/services/events з OpenClaw gateway.
-
-### Тип проєкту
-
-Python-інтеграція Home Assistant плюс Lovelace JavaScript card.
-
-### Основні точки входу і ролі файлів
-
-- `custom_components/openclaw/__init__.py` - setup/unload, services, websocket API, frontend registration; ключові символи: websocket_get_history, websocket_get_settings
-- `custom_components/openclaw/api.py` - OpenClaw gateway HTTP/SSE client; ключові символи: OpenClawApiError, OpenClawConnectionError, OpenClawAuthError, OpenClawApiClient, base_url, update_token
-- `custom_components/openclaw/config_flow.py` - addon discovery, manual config, options flow; ключові символи: OpenClawConfigFlow, async_get_options_flow, OpenClawOptionsFlow
-- `custom_components/openclaw/coordinator.py` - polling/cache/data aggregation; ключові символи: OpenClawCoordinator, update_last_activity, available_models, record_tool_invocation
-- `custom_components/openclaw/conversation.py` - Assist conversation agent; ключові символи: OpenClawConversationAgent, attribution, supported_languages
-- `custom_components/openclaw/www/openclaw-chat-card.js and www/openclaw-chat-card.js` - Lovelace card; ключові символи: renderMarkdown, OpenClawChatCard, ua, OpenClawAssistCaptureProcessor, writeString, pickVoice, speakNow, handleVoicesChanged
-- `custom_components/openclaw/services.yaml and strings.json` - HA service/UI schema
-
-### Індекс джерел
-
-- `www/openclaw-chat-card.js` - JS/TS module
-- `custom_components/openclaw/__init__.py` - Python-модуль; символи: _async_setup_token_refresh, _read, _clear_task, _async_register_services, _normalize_optional_text, _get_first_entry_data, _get_entry_options, _summarize_tool_result, _extract_assistant_message, _extract_tool_calls, _get_chat_history_store, _append_chat_history, _async_register_websocket_api, websocket_get_history
-- `custom_components/openclaw/api.py` - Python-модуль; символи: OpenClawApiError, OpenClawConnectionError, OpenClawAuthError, OpenClawApiClient, __init__, base_url, update_token, _headers
-- `custom_components/openclaw/binary_sensor.py` - Python-модуль; символи: OpenClawConnectedSensor, __init__, is_on
-- `custom_components/openclaw/button.py` - Python-модуль; символи: OpenClawButton, __init__
-- `custom_components/openclaw/config_flow.py` - Python-модуль; символи: _find_addon_config_dir, _read_gateway_token_from_path, _read_gateway_port_from_path, OpenClawConfigFlow, async_get_options_flow, __init__, OpenClawOptionsFlow
-- `custom_components/openclaw/const.py` - Python module
-- `custom_components/openclaw/conversation.py` - Python-модуль; символи: _scrub_tool_code_fences, OpenClawConversationAgent, __init__, attribution, supported_languages, _resolve_conversation_id, _normalize_optional_text, _should_continue, _error_result
-- `custom_components/openclaw/coordinator.py` - Python-модуль; символи: OpenClawCoordinator, __init__, _offline_data, update_last_activity, available_models, record_tool_invocation
-- `custom_components/openclaw/event.py` - Python-модуль; символи: OpenClawEventEntity, __init__, _handle_event
-- `custom_components/openclaw/exposure.py` - Python-модуль; символи: build_exposed_entities_context, _collect_for, apply_context_policy
-- `custom_components/openclaw/helpers.py` - Python-модуль; символи: extract_text_recursive
-- `custom_components/openclaw/select.py` - Python-модуль; символи: OpenClawModelSelect, __init__, _handle_coordinator_update
-- `custom_components/openclaw/sensor.py` - Python-модуль; символи: OpenClawSensor, __init__, native_value, extra_state_attributes
-- `custom_components/openclaw/www/openclaw-chat-card.js` - JS/TS-модуль; символи: renderMarkdown, OpenClawChatCard, ua, OpenClawAssistCaptureProcessor, writeString, pickVoice, speakNow, handleVoicesChanged, OpenClawChatCardEditor
-
-### Потік виконання / даних
-
-- Config flow знаходить або зберігає gateway connection details.
-- `__init__.py` створює OpenClawApiClient і OpenClawCoordinator, forwards platforms, registers services і card resources.
-- Conversation/card/service calls відправляють chat completions або tool requests через `api.py` і emit HA entities/events.
-
-### Збірка, запуск або перевірка
-
-- Встановити в `custom_components/openclaw` у Home Assistant, перезапустити HA і додати інтеграцію.
-- Локального test harness у цьому репозиторії немає.
-
-### Підказки для AI-агентів
-
-- Зберігати Home Assistant async patterns; уникати blocking I/O у platform code.
-- Під час зміни card JS оновлювати cache-busting/resource version за потреби.
-- Не додавати secrets у config flow logs або README examples.
-
-<!-- AI-ASSISTANT-NOTES:END -->
-
 ## [Join our Discord Server!](https://discord.gg/xeHeKu9jYp)
 <img width="1583" height="563" alt="image" src="https://github.com/user-attachments/assets/b4468dd4-2028-4620-be82-1c6876738276" />
 <img width="1536" height="542" alt="ChatGPT Image Feb 25, 2026, 11_37_02 PM" src="https://github.com/user-attachments/assets/ea662d87-5414-4c01-ac48-cb8f731a4988" />
@@ -209,6 +147,7 @@ height: 500px
 show_timestamps: true
 show_voice_button: true
 show_clear_button: true
+session_id: default
 ```
 
 Minimal config:
@@ -253,8 +192,8 @@ When enabled, OpenClaw tool-call responses can execute Home Assistant services.
 
 - **Wake word enabled**
 - **Wake word** (default: `hey openclaw`)
+- **Voice input provider** (`browser` or `assist_stt`)
 - **Voice agent ID** (optional)
-- **Voice input provider** is read from the integration settings and applies to the card automatically.
 
 ### Model selection
 
@@ -351,7 +290,7 @@ data:
   tool: sessions_list
   action: json
   args: {}
-  session_key: "<agent_id>:<session_id>"
+  session_key: main
 ```
 
 ---
@@ -471,3 +410,4 @@ MIT. See [LICENSE](LICENSE).
 
 If you find this useful and you want to bring me a coffee to make more nice stuff, or support the project, use the link below:
 - https://revolut.me/vanyo6dhw
+

@@ -633,7 +633,7 @@ class OpenClawChatCard extends HTMLElement {
       return this._speechLangOverride;
     }
 
-    const configuredLang = this._config.voice_language;
+    const configuredLang = this._config.browser_voice_language || this._config.voice_language;
     if (configuredLang) {
       return this._normalizeSpeechLanguage(configuredLang);
     }
@@ -645,7 +645,7 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getSpeechSynthesisLanguage() {
-    const configuredLang = this._config.voice_language;
+    const configuredLang = this._config.browser_voice_language || this._config.voice_language;
     if (configuredLang) {
       return this._normalizeSpeechLanguage(configuredLang);
     }
@@ -677,7 +677,9 @@ class OpenClawChatCard extends HTMLElement {
   }
 
   _getVoiceProvider() {
-    return this._config.voice_provider || "browser";
+    const value = this._config.voice_provider;
+    if (value === "assist_stt" || value === "browser") return value;
+    return "browser";
   }
 
   async _startVoiceRecognition() {
