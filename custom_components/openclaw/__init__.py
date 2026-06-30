@@ -503,9 +503,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
         if resolved_agent_id is None and source == "voice":
             resolved_agent_id = voice_agent_id
         if resolved_agent_id is None:
-            resolved_agent_id = _normalize_optional_text(
-                options.get(CONF_AGENT_ID, DEFAULT_AGENT_ID)
+            raw_agent_id = options.get(
+                CONF_AGENT_ID,
+                entry_data.get("entry").data.get(CONF_AGENT_ID, DEFAULT_AGENT_ID)
+                if isinstance(entry_data.get("entry"), ConfigEntry)
+                else DEFAULT_AGENT_ID,
             )
+            resolved_agent_id = _normalize_optional_text(raw_agent_id)
 
         try:
             include_context = options.get(
