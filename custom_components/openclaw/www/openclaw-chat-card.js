@@ -550,8 +550,7 @@ class OpenClawChatCard extends HTMLElement {
       await this._hass.callService("openclaw", "send_message", {
         message: message,
         source: source || undefined,
-        session_id: this._config.session_id || undefined,
-        agent_id: this._getAgentId() || undefined,
+        session_id: this._config.session_id || undefined
       });
 
       setTimeout(() => {
