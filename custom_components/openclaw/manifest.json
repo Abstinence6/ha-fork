@@ -3,12 +3,12 @@
   "name": "OpenClaw",
   "codeowners": ["@techartdev"],
   "config_flow": true,
-  "documentation": "https://github.com/techartdev/OpenClawHomeAssistantIntegration",
+  "documentation": "https://github.com/Abstinence6/ha-fork",
   "integration_type": "hub",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/techartdev/OpenClawHomeAssistantIntegration/issues",
+  "issue_tracker": "https://github.com/Abstinence6/ha-fork/issues",
   "requirements": [],
-  "version": "0.1.63",
+  "version": "0.1.64",
   "dependencies": ["conversation"],
   "after_dependencies": ["hassio", "lovelace"]
 }
