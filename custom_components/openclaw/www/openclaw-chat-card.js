@@ -2337,4 +2337,3 @@ console.info(
   "color: #2563eb; background: #e5e7eb; font-weight: bold; padding: 2px 6px; border-radius: 0 4px 4px 0;"
 );
 
-console.info("OPENCLAW-CHAT-CARD source", import.meta.url);
